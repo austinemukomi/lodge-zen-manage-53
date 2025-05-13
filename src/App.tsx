@@ -10,20 +10,23 @@ import { useState } from "react";
 import Dashboard from "./pages/Index";
 import Bookings from "./pages/Bookings";
 import NotFound from "./pages/NotFound";
-import { LoginForm } from "./components/auth/LoginForm";
+
+// Components
+import { AuthModal } from "./components/auth/AuthModal";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(true);
 
-  // Simple Login wrapper for demo purposes
-  const LoginPage = () => {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F9FAFB] p-4">
-        <LoginForm />
-      </div>
-    );
+  // Handling authentication state changes
+  const handleAuthChange = (open: boolean) => {
+    setAuthModalOpen(open);
+    // If modal is closed and user is not authenticated, reopen it
+    if (!open && !isAuthenticated) {
+      setTimeout(() => setAuthModalOpen(true), 100);
+    }
   };
 
   return (
@@ -32,13 +35,20 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/bookings" element={<Bookings />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          {isAuthenticated ? (
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/bookings" element={<Bookings />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          ) : (
+            <>
+              <AuthModal open={authModalOpen} onOpenChange={handleAuthChange} />
+              <div className="h-screen flex items-center justify-center bg-[#F9FAFB]">
+                {/* This div ensures the page has content while the modal is open */}
+              </div>
+            </>
+          )}
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
