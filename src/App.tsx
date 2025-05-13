@@ -10,7 +10,7 @@ import { useState } from "react";
 import Dashboard from "./pages/Index";
 import Bookings from "./pages/Bookings";
 import NotFound from "./pages/NotFound";
-import AuthModal from "./components/auth/AuthModal";
+import { LoginForm } from "./components/auth/LoginForm";
 
 const queryClient = new QueryClient();
 
@@ -21,7 +21,7 @@ const App = () => {
   const LoginPage = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F9FAFB] p-4">
-        <AuthModal />
+        <LoginForm />
       </div>
     );
   };
