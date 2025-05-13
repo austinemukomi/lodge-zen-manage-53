@@ -47,7 +47,7 @@ const LandingPage = ({ onLogin }: LandingPageProps) => {
               size="lg" 
               className="text-lg px-8 bg-primary hover:bg-primary/90"
             >
-              Sign In
+              SignIn
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
