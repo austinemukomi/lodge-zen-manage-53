@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,7 +16,6 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -153,11 +151,10 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input className="pl-10" placeholder="Enter your email" {...field} />
+                          <Input className="pl-10" placeholder="Email" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -170,11 +167,10 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input className="pl-10" type="password" placeholder="••••••••" {...field} />
+                          <Input className="pl-10" type="password" placeholder="Password" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -210,11 +206,10 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                   name="fullName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input className="pl-10" placeholder="John Doe" {...field} />
+                          <Input className="pl-10" placeholder="Full Name" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -227,11 +222,10 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input className="pl-10" placeholder="you@example.com" {...field} />
+                          <Input className="pl-10" placeholder="Email Address" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -244,11 +238,10 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input className="pl-10" placeholder="+263 7X XXX XXXX" {...field} />
+                          <Input className="pl-10" placeholder="Phone Number (+263 7X XXX XXXX)" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -261,11 +254,10 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input className="pl-10" type="password" placeholder="••••••••" {...field} />
+                          <Input className="pl-10" type="password" placeholder="Password (min. 6 characters)" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -278,7 +270,6 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                   name="role"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Register as</FormLabel>
                       <FormControl>
                         <RadioGroup
                           onValueChange={field.onChange}
@@ -289,17 +280,13 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                             <FormControl>
                               <RadioGroupItem value="user" />
                             </FormControl>
-                            <FormLabel className="font-normal cursor-pointer">
-                              User / Guest
-                            </FormLabel>
+                            <span className="font-normal cursor-pointer">User / Guest</span>
                           </FormItem>
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl>
                               <RadioGroupItem value="receptionist" />
                             </FormControl>
-                            <FormLabel className="font-normal cursor-pointer">
-                              Receptionist
-                            </FormLabel>
+                            <span className="font-normal cursor-pointer">Receptionist</span>
                           </FormItem>
                         </RadioGroup>
                       </FormControl>
