@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -47,12 +46,12 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 interface AuthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onLoginSuccess?: (role: "admin" | "receptionist" | "user") => void;
 }
 
-export function AuthModal({ open, onOpenChange }: AuthModalProps) {
+export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps) {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -80,10 +79,23 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
       // Simulate login process
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
-      // For demo purposes, we'll just pretend to login and navigate to dashboard
-      toast.success("Login successful");
-      onOpenChange(false);
-      navigate("/");
+      // For demo purposes, we'll simulate different roles
+      // In a real app, this would come from your auth system
+      let role: "admin" | "receptionist" | "user";
+      
+      // Mock logic: for demo purposes only
+      if (values.email.includes("admin")) {
+        role = "admin";
+      } else if (values.email.includes("receptionist")) {
+        role = "receptionist";
+      } else {
+        role = "user";
+      }
+      
+      toast.success(`Login successful as ${role}`);
+      if (onLoginSuccess) {
+        onLoginSuccess(role);
+      }
     } catch (error) {
       console.error("Login failed:", error);
       toast.error("Login failed. Please check your credentials.");

@@ -7,9 +7,12 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState } from "react";
 
 // Pages
+import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Index";
 import Bookings from "./pages/Bookings";
 import NotFound from "./pages/NotFound";
+import UserDashboard from "./pages/UserDashboard";
+import ReceptionistDashboard from "./pages/ReceptionistDashboard";
 
 // Components
 import { AuthModal } from "./components/auth/AuthModal";
@@ -18,15 +21,19 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(true);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [userRole, setUserRole] = useState<"admin" | "receptionist" | "user" | null>(null);
 
   // Handling authentication state changes
   const handleAuthChange = (open: boolean) => {
     setAuthModalOpen(open);
-    // If modal is closed and user is not authenticated, reopen it
-    if (!open && !isAuthenticated) {
-      setTimeout(() => setAuthModalOpen(true), 100);
-    }
+  };
+
+  // Handle successful login
+  const handleLoginSuccess = (role: "admin" | "receptionist" | "user") => {
+    setIsAuthenticated(true);
+    setUserRole(role);
+    setAuthModalOpen(false);
   };
 
   return (
@@ -35,19 +42,44 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <AuthModal 
+            open={authModalOpen} 
+            onOpenChange={handleAuthChange}
+            onLoginSuccess={handleLoginSuccess} 
+          />
+          
           {isAuthenticated ? (
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/bookings" element={<Bookings />} />
+              {/* Admin routes */}
+              {userRole === "admin" && (
+                <>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/bookings" element={<Bookings />} />
+                </>
+              )}
+              
+              {/* Receptionist routes */}
+              {userRole === "receptionist" && (
+                <>
+                  <Route path="/" element={<ReceptionistDashboard />} />
+                  <Route path="/bookings" element={<Bookings />} />
+                </>
+              )}
+              
+              {/* User/Guest routes */}
+              {userRole === "user" && (
+                <>
+                  <Route path="/" element={<UserDashboard />} />
+                </>
+              )}
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           ) : (
-            <>
-              <AuthModal open={authModalOpen} onOpenChange={handleAuthChange} />
-              <div className="h-screen flex items-center justify-center bg-[#F9FAFB]">
-                {/* This div ensures the page has content while the modal is open */}
-              </div>
-            </>
+            <Routes>
+              <Route path="/" element={<LandingPage onLogin={() => setAuthModalOpen(true)} />} />
+              <Route path="*" element={<Navigate to="/" />} />
+            </Routes>
           )}
         </BrowserRouter>
       </TooltipProvider>
