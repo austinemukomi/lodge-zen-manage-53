@@ -24,23 +24,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { UserRole } from "@/utils/types";
 import { Bed, User, Lock, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
-
-const parseJwt = (token: string) => {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const payload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => `%${('00' + c.charCodeAt(0).toString(16)).slice(-2)}`)
-        .join('')
-    );
-    return JSON.parse(payload);
-  } catch (error) {
-    console.error("Failed to parse JWT:", error);
-    return null;
-  }
-};
+import { parseJwt } from "@/utils/authUtils";
+import { useNavigate } from "react-router-dom";
 
 const loginSchema = z.object({
   username: z.string().min(2, { message: "Username must be at least 2 characters" }),
@@ -67,6 +52,7 @@ interface AuthModalProps {
 export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps) {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -121,13 +107,26 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
         console.log("Logged in as:", username, "with role:", role, "and user ID:", userId);
 
         toast.success(`Login successful as ${username} (${role})`);
-
+        
+        // Route to appropriate dashboard based on role
         if (onLoginSuccess) {
           onLoginSuccess(role as UserRole);
         }
-
-        // You can add redirection logic here
-        // window.location.href = `/dashboard/${userId}`;
+        
+        // Navigate to role-specific page
+        switch (role) {
+          case "ADMIN":
+            navigate('/admin');
+            break;
+          case "RECEPTIONIST":
+            navigate('/receptionist');
+            break;
+          case "USER":
+            navigate('/user');
+            break;
+          default:
+            navigate('/');
+        }
       } else {
         throw new Error('No token received');
       }

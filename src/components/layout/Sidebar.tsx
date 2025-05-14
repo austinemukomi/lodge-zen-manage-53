@@ -12,6 +12,7 @@ import {
   LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getUserRoleFromToken } from "@/utils/authUtils";
 
 interface SidebarProps {
   className?: string;
@@ -20,38 +21,57 @@ interface SidebarProps {
 export function Sidebar({ className }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const userRole = getUserRoleFromToken();
 
   const isActive = (path: string) => {
     return location.pathname === path;
   };
 
-  const navItems = [
-    {
-      name: "Dashboard",
-      path: "/",
-      icon: <Bed className="w-5 h-5" />,
-    },
-    {
-      name: "Bookings",
-      path: "/bookings",
-      icon: <Calendar className="w-5 h-5" />,
-    },
-    {
-      name: "Guests",
-      path: "/guests",
-      icon: <Users className="w-5 h-5" />,
-    },
-    {
-      name: "Reports",
-      path: "/reports",
-      icon: <BarChart3 className="w-5 h-5" />,
-    },
-    {
+  // Define navigation items based on user role
+  const getNavItems = () => {
+    const baseItems = [
+      {
+        name: "Dashboard",
+        path: "/",
+        icon: <Bed className="w-5 h-5" />,
+      }
+    ];
+
+    if (userRole === "ADMIN" || userRole === "RECEPTIONIST") {
+      baseItems.push(
+        {
+          name: "Bookings",
+          path: "/bookings",
+          icon: <Calendar className="w-5 h-5" />,
+        },
+        {
+          name: "Guests",
+          path: "/guests",
+          icon: <Users className="w-5 h-5" />,
+        }
+      );
+    }
+
+    if (userRole === "ADMIN") {
+      baseItems.push(
+        {
+          name: "Reports",
+          path: "/reports",
+          icon: <BarChart3 className="w-5 h-5" />,
+        }
+      );
+    }
+
+    baseItems.push({
       name: "Settings",
       path: "/settings",
       icon: <Settings className="w-5 h-5" />,
-    },
-  ];
+    });
+
+    return baseItems;
+  };
+
+  const navItems = getNavItems();
 
   return (
     <aside
@@ -103,16 +123,15 @@ export function Sidebar({ className }: SidebarProps) {
       </div>
 
       <div className="p-4 border-t border-gray-200">
-        <Link
-          to="/login"
+        <div
           className={cn(
-            "flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors",
+            "flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer",
             collapsed ? "justify-center" : "justify-start"
           )}
         >
           <LogOut className="h-5 w-5" />
           {!collapsed && <span className="ml-3">Logout</span>}
-        </Link>
+        </div>
       </div>
     </aside>
   );
