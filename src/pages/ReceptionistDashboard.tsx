@@ -11,7 +11,7 @@ interface ReceptionistDashboardProps {
   onLogout: () => void;
 }
 
-const ReceptionistDashboard = ({ onLogout }: ReceptionistDashboardProps) => {
+const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout }) => {
   return (
     <div className="flex h-screen bg-[#F9FAFB]">
       <Sidebar />

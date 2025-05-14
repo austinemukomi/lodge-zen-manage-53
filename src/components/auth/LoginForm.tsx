@@ -9,7 +9,7 @@ import { toast } from "sonner";
 export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("receptionist");
+  const [role, setRole] = useState<UserRole>("RECEPTIONIST");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -99,7 +99,7 @@ export function LoginForm() {
               Login as
             </label>
             <div className="grid grid-cols-3 gap-3">
-              {(["admin", "receptionist", "cleaner"] as UserRole[]).map((r) => (
+              {(["ADMIN", "RECEPTIONIST", "USER"] as UserRole[]).map((r) => (
                 <button
                   key={r}
                   type="button"
@@ -113,7 +113,7 @@ export function LoginForm() {
                     }
                   `}
                 >
-                  {r}
+                  {r.toLowerCase()}
                 </button>
               ))}
             </div>

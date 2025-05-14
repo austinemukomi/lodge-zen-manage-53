@@ -9,7 +9,7 @@ interface UserDashboardProps {
   onLogout: () => void;
 }
 
-const UserDashboard = ({ onLogout }: UserDashboardProps) => {
+const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
   return (
     <div className="flex h-screen bg-[#F9FAFB]">
       <Sidebar />
