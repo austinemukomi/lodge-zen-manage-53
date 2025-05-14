@@ -18,9 +18,13 @@ import ReceptionistDashboard from "./pages/ReceptionistDashboard";
 // Components
 import { AuthModal } from "./components/auth/AuthModal";
 import { UserRole } from "./utils/types";
-import { isTokenValid, getUserRoleFromToken, clearAuthToken } from "./utils/authUtils";
+import { isTokenValid, getUserRoleFromToken, clearAuthToken, parseJwt } from "./utils/authUtils";
 
 const queryClient = new QueryClient();
+
+interface DashboardProps {
+  onLogout: () => void;
+}
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -31,12 +35,15 @@ const App = () => {
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     if (token && isTokenValid(token)) {
-      const role = getUserRoleFromToken();
-      if (role) {
+      const decodedToken = parseJwt(token);
+      if (decodedToken) {
+        const role = decodedToken.role;
         setIsAuthenticated(true);
         setUserRole(role);
+        console.log("Auto-authenticated as role:", role);
       } else {
         clearAuthToken();
+        console.log("Invalid token, cleared auth");
       }
     }
   }, []);
@@ -48,6 +55,7 @@ const App = () => {
 
   // Handle successful login
   const handleLoginSuccess = (role: UserRole) => {
+    console.log("Login successful, role:", role);
     setIsAuthenticated(true);
     setUserRole(role);
     setAuthModalOpen(false);
@@ -59,7 +67,6 @@ const App = () => {
     setIsAuthenticated(false);
     setUserRole(null);
     toast.success("You have been logged out successfully");
-    // Navigate to landing page will happen via the Routes below
   };
 
   return (

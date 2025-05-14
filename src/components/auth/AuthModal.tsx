@@ -95,11 +95,19 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
       if (data.token) {
         localStorage.setItem('authToken', data.token);
         
-        // Decode the token to get the user role
+        // Decode the token to get the user information
         const decoded = parseJwt(data.token);
-        const role = decoded?.role || "USER";
+        if (!decoded) {
+          throw new Error('Failed to decode token');
+        }
         
-        toast.success(`Login successful as ${role}`);
+        const role = decoded.role;
+        const username = decoded.username;
+        
+        console.log("Logged in as:", username, "with role:", role);
+        
+        toast.success(`Login successful as ${username} (${role})`);
+        
         if (onLoginSuccess) {
           onLoginSuccess(role as UserRole);
         }

@@ -2,7 +2,7 @@
 import { UserRole } from "./types";
 
 interface DecodedToken {
-  id: null;
+  id: string;
   sub: string;
   role: UserRole;
   exp: number;
@@ -48,6 +48,14 @@ export function getUserRoleFromToken(): UserRole | null {
   return decoded?.role || null;
 }
 
+export function getUserIdFromToken(): string | null {
+  const token = localStorage.getItem('authToken');
+  if (!token) return null;
+  
+  const decoded = parseJwt(token);
+  return decoded?.id || null;
+}
+
 export function getUsername(): string | null {
   const token = localStorage.getItem('authToken');
   if (!token) return null;
@@ -59,4 +67,3 @@ export function getUsername(): string | null {
 export function clearAuthToken(): void {
   localStorage.removeItem('authToken');
 }
-
