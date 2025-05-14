@@ -87,8 +87,8 @@ const App = () => {
               {userRole === "ADMIN" && (
                 <>
                   <Route path="/" element={<Dashboard onLogout={handleLogout} />} />
+                  <Route path="/admin" element={<Dashboard onLogout={handleLogout} />} />
                   <Route path="/bookings" element={<Bookings onLogout={handleLogout} />} />
-                  <Route path="*" element={<Navigate to="/" />} />
                 </>
               )}
               
@@ -96,8 +96,8 @@ const App = () => {
               {userRole === "RECEPTIONIST" && (
                 <>
                   <Route path="/" element={<ReceptionistDashboard onLogout={handleLogout} />} />
+                  <Route path="/receptionist" element={<ReceptionistDashboard onLogout={handleLogout} />} />
                   <Route path="/bookings" element={<Bookings onLogout={handleLogout} />} />
-                  <Route path="*" element={<Navigate to="/" />} />
                 </>
               )}
               
@@ -105,11 +105,11 @@ const App = () => {
               {userRole === "USER" && (
                 <>
                   <Route path="/" element={<UserDashboard onLogout={handleLogout} />} />
-                  <Route path="*" element={<Navigate to="/" />} />
+                  <Route path="/user" element={<UserDashboard onLogout={handleLogout} />} />
                 </>
               )}
               
-              {/* Fallback route if role doesn't match any defined routes */}
+              {/* Fallback route if paths don't match */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           ) : (

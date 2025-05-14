@@ -36,6 +36,7 @@ export function isTokenValid(token: string): boolean {
     const currentTime = Date.now() / 1000;
     return decoded.exp > currentTime;
   } catch (error) {
+    console.error("Error validating token:", error);
     return false;
   }
 }
@@ -44,24 +45,39 @@ export function getUserRoleFromToken(): UserRole | null {
   const token = localStorage.getItem('authToken');
   if (!token) return null;
   
-  const decoded = parseJwt(token);
-  return decoded?.role || null;
+  try {
+    const decoded = parseJwt(token);
+    return decoded?.role || null;
+  } catch (error) {
+    console.error("Error getting user role from token:", error);
+    return null;
+  }
 }
 
 export function getUserIdFromToken(): string | null {
   const token = localStorage.getItem('authToken');
   if (!token) return null;
   
-  const decoded = parseJwt(token);
-  return decoded?.id || null;
+  try {
+    const decoded = parseJwt(token);
+    return decoded?.id || null;
+  } catch (error) {
+    console.error("Error getting user ID from token:", error);
+    return null;
+  }
 }
 
 export function getUsername(): string | null {
   const token = localStorage.getItem('authToken');
   if (!token) return null;
   
-  const decoded = parseJwt(token);
-  return decoded?.username || null;
+  try {
+    const decoded = parseJwt(token);
+    return decoded?.username || null;
+  } catch (error) {
+    console.error("Error getting username from token:", error);
+    return null;
+  }
 }
 
 export function clearAuthToken(): void {

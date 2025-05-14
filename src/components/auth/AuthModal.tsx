@@ -26,6 +26,7 @@ import { UserRole } from "@/utils/types";
 import { Bed, User, Lock, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { parseJwt } from "@/utils/authUtils";
+import { useNavigate } from "react-router-dom";
 
 const loginSchema = z.object({
   username: z.string().min(2, { message: "Username must be at least 2 characters" }),
@@ -52,6 +53,7 @@ interface AuthModalProps {
 export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps) {
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -108,8 +110,24 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
         
         toast.success(`Login successful as ${username} (${role})`);
         
+        // Route to appropriate dashboard based on role
         if (onLoginSuccess) {
           onLoginSuccess(role as UserRole);
+        }
+        
+        // Navigate to role-specific page
+        switch (role) {
+          case "ADMIN":
+            navigate('/admin');
+            break;
+          case "RECEPTIONIST":
+            navigate('/receptionist');
+            break;
+          case "USER":
+            navigate('/user');
+            break;
+          default:
+            navigate('/');
         }
       } else {
         throw new Error('No token received');
