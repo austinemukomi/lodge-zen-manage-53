@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Bed, ArrowRight } from 'lucide-react';
+import { Bed } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 
@@ -48,7 +48,6 @@ const LandingPage = ({ onLogin }: LandingPageProps) => {
               className="text-lg px-8 bg-primary hover:bg-primary/90"
             >
               SignIn
-              <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
           

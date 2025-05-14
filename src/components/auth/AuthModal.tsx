@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,15 +27,15 @@ import { Bed, User, Lock, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
 
 const loginSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
+  username: z.string().min(2, { message: "Username must be at least 2 characters" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 });
 
 const registerSchema = z.object({
-  fullName: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  username: z.string().min(2, { message: "Username must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-  phone: z.string().min(10, { message: "Please enter a valid phone number" }),
+  phoneNumber: z.string().min(10, { message: "Please enter a valid phone number" }),
   role: z.enum(["receptionist", "user"] as const),
 });
 
@@ -54,7 +55,7 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
@@ -62,10 +63,10 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      fullName: "",
+      username: "",
       email: "",
       password: "",
-      phone: "",
+      phoneNumber: "",
       role: "user",
     },
   });
@@ -74,25 +75,25 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
     setIsLoading(true);
     
     try {
-      // Simulate login process
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Call the login API
+      const response = await fetch('http://localhost:8080/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values)
+      });
       
-      // For demo purposes, we'll simulate different roles
-      // In a real app, this would come from your auth system
-      let role: "admin" | "receptionist" | "user";
-      
-      // Mock logic: for demo purposes only
-      if (values.email.includes("admin")) {
-        role = "admin";
-      } else if (values.email.includes("receptionist")) {
-        role = "receptionist";
-      } else {
-        role = "user";
+      if (!response.ok) {
+        throw new Error('Login failed');
       }
+      
+      const data = await response.json();
+      const role = data.role || 'user'; // Default to user if role is not provided
       
       toast.success(`Login successful as ${role}`);
       if (onLoginSuccess) {
-        onLoginSuccess(role);
+        onLoginSuccess(role as "admin" | "receptionist" | "user");
       }
     } catch (error) {
       console.error("Login failed:", error);
@@ -106,8 +107,18 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
     setIsLoading(true);
     
     try {
-      // Simulate registration process
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Call the register API
+      const response = await fetch('http://localhost:8080/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Registration failed');
+      }
       
       toast.success(`Registration successful! You can now login as ${values.role}.`);
       setActiveTab("login");
@@ -148,13 +159,13 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
               <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                 <FormField
                   control={loginForm.control}
-                  name="email"
+                  name="username"
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input className="pl-10" placeholder="Email" {...field} />
+                          <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input className="pl-10" placeholder="Username" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -203,13 +214,13 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
               <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
                 <FormField
                   control={registerForm.control}
-                  name="fullName"
+                  name="username"
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
                         <div className="relative">
                           <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                          <Input className="pl-10" placeholder="Full Name" {...field} />
+                          <Input className="pl-10" placeholder="Username" {...field} />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -235,7 +246,7 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                 
                 <FormField
                   control={registerForm.control}
-                  name="phone"
+                  name="phoneNumber"
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
