@@ -25,6 +25,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { UserRole } from "@/utils/types";
 import { Bed, User, Lock, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
+import { parseJwt } from "@/utils/authUtils";
 
 const loginSchema = z.object({
   username: z.string().min(2, { message: "Username must be at least 2 characters" }),
@@ -89,12 +90,21 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
       }
       
       const data = await response.json();
-      // Convert role to uppercase if it's not already
-      const role = (data.role || 'USER').toUpperCase() as UserRole;
       
-      toast.success(`Login successful as ${role}`);
-      if (onLoginSuccess) {
-        onLoginSuccess(role);
+      // Store the JWT token in localStorage
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+        
+        // Decode the token to get the user role
+        const decoded = parseJwt(data.token);
+        const role = decoded?.role || "USER";
+        
+        toast.success(`Login successful as ${role}`);
+        if (onLoginSuccess) {
+          onLoginSuccess(role as UserRole);
+        }
+      } else {
+        throw new Error('No token received');
       }
     } catch (error) {
       console.error("Login failed:", error);
