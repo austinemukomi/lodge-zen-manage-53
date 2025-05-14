@@ -2,6 +2,7 @@
 import { UserRole } from "./types";
 
 interface DecodedToken {
+  id: null;
   sub: string;
   role: UserRole;
   exp: number;
