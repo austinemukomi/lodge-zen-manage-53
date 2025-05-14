@@ -16,13 +16,14 @@ import ReceptionistDashboard from "./pages/ReceptionistDashboard";
 
 // Components
 import { AuthModal } from "./components/auth/AuthModal";
+import { UserRole } from "./utils/types";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [userRole, setUserRole] = useState<"admin" | "receptionist" | "user" | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
 
   // Handling authentication state changes
   const handleAuthChange = (open: boolean) => {
@@ -30,10 +31,17 @@ const App = () => {
   };
 
   // Handle successful login
-  const handleLoginSuccess = (role: "admin" | "receptionist" | "user") => {
+  const handleLoginSuccess = (role: UserRole) => {
     setIsAuthenticated(true);
     setUserRole(role);
     setAuthModalOpen(false);
+  };
+
+  // Handle logout
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUserRole(null);
+    // Navigate to landing page will happen via the Routes below
   };
 
   return (
@@ -51,25 +59,25 @@ const App = () => {
           {isAuthenticated ? (
             <Routes>
               {/* Admin routes */}
-              {userRole === "admin" && (
+              {userRole === "ADMIN" && (
                 <>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/bookings" element={<Bookings />} />
+                  <Route path="/" element={<Dashboard onLogout={handleLogout} />} />
+                  <Route path="/bookings" element={<Bookings onLogout={handleLogout} />} />
                 </>
               )}
               
               {/* Receptionist routes */}
-              {userRole === "receptionist" && (
+              {userRole === "RECEPTIONIST" && (
                 <>
-                  <Route path="/" element={<ReceptionistDashboard />} />
-                  <Route path="/bookings" element={<Bookings />} />
+                  <Route path="/" element={<ReceptionistDashboard onLogout={handleLogout} />} />
+                  <Route path="/bookings" element={<Bookings onLogout={handleLogout} />} />
                 </>
               )}
               
               {/* User/Guest routes */}
-              {userRole === "user" && (
+              {userRole === "USER" && (
                 <>
-                  <Route path="/" element={<UserDashboard />} />
+                  <Route path="/" element={<UserDashboard onLogout={handleLogout} />} />
                 </>
               )}
               

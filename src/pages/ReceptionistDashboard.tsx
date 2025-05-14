@@ -7,13 +7,17 @@ import { StatusLegend } from "@/components/dashboard/StatusLegend";
 import { Button } from "@/components/ui/button";
 import { Calendar, CheckSquare, Plus, UserCheck, UserX } from "lucide-react";
 
-const ReceptionistDashboard = () => {
+interface ReceptionistDashboardProps {
+  onLogout: () => void;
+}
+
+const ReceptionistDashboard = ({ onLogout }: ReceptionistDashboardProps) => {
   return (
     <div className="flex h-screen bg-[#F9FAFB]">
       <Sidebar />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
+        <Header onLogout={onLogout} />
         
         <main className="flex-1 overflow-y-auto p-6">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">

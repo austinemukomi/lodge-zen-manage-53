@@ -1,9 +1,21 @@
 
 import React from "react";
-import { Bell, Search, User } from "lucide-react";
+import { Bell, LogOut, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
-export function Header() {
+interface HeaderProps {
+  onLogout?: () => void;
+}
+
+export function Header({ onLogout }: HeaderProps) {
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout();
+      toast.success("You have been logged out successfully");
+    }
+  };
+
   return (
     <header className="bg-white border-b border-gray-200 py-4 px-6">
       <div className="flex justify-between items-center">
@@ -35,6 +47,11 @@ export function Header() {
             </div>
             <span className="text-sm font-medium hidden md:block">User</span>
           </div>
+          
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="flex items-center gap-1">
+            <LogOut className="h-4 w-4" />
+            <span className="hidden md:inline">Logout</span>
+          </Button>
         </div>
       </div>
     </header>

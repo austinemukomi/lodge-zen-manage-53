@@ -36,7 +36,7 @@ const registerSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
   phoneNumber: z.string().min(10, { message: "Please enter a valid phone number" }),
-  role: z.enum(["receptionist", "user"] as const),
+  role: z.enum(["RECEPTIONIST", "USER"] as const),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -45,7 +45,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 interface AuthModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onLoginSuccess?: (role: "admin" | "receptionist" | "user") => void;
+  onLoginSuccess?: (role: UserRole) => void;
 }
 
 export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps) {
@@ -67,7 +67,7 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
       email: "",
       password: "",
       phoneNumber: "",
-      role: "user",
+      role: "USER",
     },
   });
 
@@ -89,11 +89,12 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
       }
       
       const data = await response.json();
-      const role = data.role || 'user'; // Default to user if role is not provided
+      // Convert role to uppercase if it's not already
+      const role = (data.role || 'USER').toUpperCase() as UserRole;
       
       toast.success(`Login successful as ${role}`);
       if (onLoginSuccess) {
-        onLoginSuccess(role as "admin" | "receptionist" | "user");
+        onLoginSuccess(role);
       }
     } catch (error) {
       console.error("Login failed:", error);
@@ -192,19 +193,6 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Logging in..." : "Login"}
                 </Button>
-                
-                <div className="text-center text-sm">
-                  <span className="text-muted-foreground">
-                    Don't have an account?{" "}
-                  </span>
-                  <Button 
-                    variant="link" 
-                    className="p-0" 
-                    onClick={() => setActiveTab("register")}
-                  >
-                    Register here
-                  </Button>
-                </div>
               </form>
             </Form>
           </TabsContent>
@@ -289,13 +277,13 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                         >
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl>
-                              <RadioGroupItem value="user" />
+                              <RadioGroupItem value="USER" />
                             </FormControl>
                             <span className="font-normal cursor-pointer">User / Guest</span>
                           </FormItem>
                           <FormItem className="flex items-center space-x-3 space-y-0">
                             <FormControl>
-                              <RadioGroupItem value="receptionist" />
+                              <RadioGroupItem value="RECEPTIONIST" />
                             </FormControl>
                             <span className="font-normal cursor-pointer">Receptionist</span>
                           </FormItem>
@@ -309,19 +297,6 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Creating account..." : "Create account"}
                 </Button>
-                
-                <div className="text-center text-sm">
-                  <span className="text-muted-foreground">
-                    Already have an account?{" "}
-                  </span>
-                  <Button 
-                    variant="link" 
-                    className="p-0" 
-                    onClick={() => setActiveTab("login")}
-                  >
-                    Login here
-                  </Button>
-                </div>
               </form>
             </Form>
           </TabsContent>

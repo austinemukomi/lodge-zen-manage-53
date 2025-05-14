@@ -5,13 +5,17 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Bell, Calendar, CreditCard, HelpCircle, Plus } from "lucide-react";
 
-const UserDashboard = () => {
+interface UserDashboardProps {
+  onLogout: () => void;
+}
+
+const UserDashboard = ({ onLogout }: UserDashboardProps) => {
   return (
     <div className="flex h-screen bg-[#F9FAFB]">
       <Sidebar />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
+        <Header onLogout={onLogout} />
         
         <main className="flex-1 overflow-y-auto p-6">
           <div className="mb-6">
