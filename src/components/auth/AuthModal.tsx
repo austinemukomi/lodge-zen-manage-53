@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,7 +24,23 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { UserRole } from "@/utils/types";
 import { Bed, User, Lock, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
-import { parseJwt } from "@/utils/authUtils";
+
+const parseJwt = (token: string) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => `%${('00' + c.charCodeAt(0).toString(16)).slice(-2)}`)
+        .join('')
+    );
+    return JSON.parse(payload);
+  } catch (error) {
+    console.error("Failed to parse JWT:", error);
+    return null;
+  }
+};
 
 const loginSchema = z.object({
   username: z.string().min(2, { message: "Username must be at least 2 characters" }),
@@ -74,9 +89,8 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
 
   const onLoginSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
-    
+
     try {
-      // Call the login API
       const response = await fetch('http://localhost:8080/auth/login', {
         method: 'POST',
         headers: {
@@ -84,33 +98,36 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
         },
         body: JSON.stringify(values)
       });
-      
+
       if (!response.ok) {
         throw new Error('Login failed');
       }
-      
+
       const data = await response.json();
-      
-      // Store the JWT token in localStorage
-      if (data.token) {
-        localStorage.setItem('authToken', data.token);
-        
-        // Decode the token to get the user information
-        const decoded = parseJwt(data.token);
+
+      if (data.authenticationResponse && data.authenticationResponse.token) {
+        const token = data.authenticationResponse.token;
+        localStorage.setItem('authToken', token);
+
+        const decoded = parseJwt(token);
         if (!decoded) {
           throw new Error('Failed to decode token');
         }
-        
+
         const role = decoded.role;
+        const userId = decoded.id;
         const username = decoded.username;
-        
-        console.log("Logged in as:", username, "with role:", role);
-        
+
+        console.log("Logged in as:", username, "with role:", role, "and user ID:", userId);
+
         toast.success(`Login successful as ${username} (${role})`);
-        
+
         if (onLoginSuccess) {
           onLoginSuccess(role as UserRole);
         }
+
+        // You can add redirection logic here
+        // window.location.href = `/dashboard/${userId}`;
       } else {
         throw new Error('No token received');
       }
@@ -124,9 +141,8 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
 
   const onRegisterSubmit = async (values: RegisterFormValues) => {
     setIsLoading(true);
-    
+
     try {
-      // Call the register API
       const response = await fetch('http://localhost:8080/auth/register', {
         method: 'POST',
         headers: {
@@ -134,11 +150,11 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
         },
         body: JSON.stringify(values)
       });
-      
+
       if (!response.ok) {
         throw new Error('Registration failed');
       }
-      
+
       toast.success(`Registration successful! You can now login as ${values.role}.`);
       setActiveTab("login");
       registerForm.reset();
@@ -161,7 +177,7 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
           <DialogTitle className="text-2xl font-bold mt-2">LodgeMaster</DialogTitle>
           <DialogDescription>Hotel & Lodge Management System</DialogDescription>
         </DialogHeader>
-        
+
         <Tabs 
           defaultValue="login" 
           value={activeTab} 
@@ -172,7 +188,7 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
             <TabsTrigger value="login">Login</TabsTrigger>
             <TabsTrigger value="register">Register</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="login">
             <Form {...loginForm}>
               <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
@@ -191,7 +207,7 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={loginForm.control}
                   name="password"
@@ -207,14 +223,14 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                     </FormItem>
                   )}
                 />
-                
+
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Logging in..." : "Login"}
                 </Button>
               </form>
             </Form>
           </TabsContent>
-          
+
           <TabsContent value="register">
             <Form {...registerForm}>
               <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
@@ -233,7 +249,7 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={registerForm.control}
                   name="email"
@@ -249,7 +265,7 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={registerForm.control}
                   name="phoneNumber"
@@ -265,7 +281,7 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={registerForm.control}
                   name="password"
@@ -281,7 +297,7 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={registerForm.control}
                   name="role"
@@ -311,7 +327,7 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
                     </FormItem>
                   )}
                 />
-                
+
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Creating account..." : "Create account"}
                 </Button>
@@ -319,7 +335,7 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
             </Form>
           </TabsContent>
         </Tabs>
-        
+
         <div className="text-center text-xs text-muted-foreground mt-4">
           <p>Admin accounts are created manually by system administrators.</p>
         </div>

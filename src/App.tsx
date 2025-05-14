@@ -4,8 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
@@ -18,35 +17,13 @@ import ReceptionistDashboard from "./pages/ReceptionistDashboard";
 // Components
 import { AuthModal } from "./components/auth/AuthModal";
 import { UserRole } from "./utils/types";
-import { isTokenValid, getUserRoleFromToken, clearAuthToken, parseJwt } from "./utils/authUtils";
 
 const queryClient = new QueryClient();
-
-interface DashboardProps {
-  onLogout: () => void;
-}
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
-
-  // Check for existing token on app startup
-  useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token && isTokenValid(token)) {
-      const decodedToken = parseJwt(token);
-      if (decodedToken) {
-        const role = decodedToken.role;
-        setIsAuthenticated(true);
-        setUserRole(role);
-        console.log("Auto-authenticated as role:", role);
-      } else {
-        clearAuthToken();
-        console.log("Invalid token, cleared auth");
-      }
-    }
-  }, []);
 
   // Handling authentication state changes
   const handleAuthChange = (open: boolean) => {
@@ -55,7 +32,6 @@ const App = () => {
 
   // Handle successful login
   const handleLoginSuccess = (role: UserRole) => {
-    console.log("Login successful, role:", role);
     setIsAuthenticated(true);
     setUserRole(role);
     setAuthModalOpen(false);
@@ -63,10 +39,9 @@ const App = () => {
 
   // Handle logout
   const handleLogout = () => {
-    clearAuthToken();
     setIsAuthenticated(false);
     setUserRole(null);
-    toast.success("You have been logged out successfully");
+    // Navigate to landing page will happen via the Routes below
   };
 
   return (
@@ -88,7 +63,6 @@ const App = () => {
                 <>
                   <Route path="/" element={<Dashboard onLogout={handleLogout} />} />
                   <Route path="/bookings" element={<Bookings onLogout={handleLogout} />} />
-                  <Route path="*" element={<Navigate to="/" />} />
                 </>
               )}
               
@@ -97,7 +71,6 @@ const App = () => {
                 <>
                   <Route path="/" element={<ReceptionistDashboard onLogout={handleLogout} />} />
                   <Route path="/bookings" element={<Bookings onLogout={handleLogout} />} />
-                  <Route path="*" element={<Navigate to="/" />} />
                 </>
               )}
               
@@ -105,11 +78,9 @@ const App = () => {
               {userRole === "USER" && (
                 <>
                   <Route path="/" element={<UserDashboard onLogout={handleLogout} />} />
-                  <Route path="*" element={<Navigate to="/" />} />
                 </>
               )}
               
-              {/* Fallback route if role doesn't match any defined routes */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           ) : (
