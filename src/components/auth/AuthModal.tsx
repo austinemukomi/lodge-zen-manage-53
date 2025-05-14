@@ -24,7 +24,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { UserRole } from "@/utils/types";
 import { Bed, User, Lock, Mail, Phone } from "lucide-react";
 import { toast } from "sonner";
-import { parseJwt } from "@/utils/authUtils";
 import { useNavigate } from "react-router-dom";
 
 const loginSchema = z.object({
@@ -91,44 +90,33 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
 
       const data = await response.json();
 
-      if (data.authenticationResponse && data.authenticationResponse.token) {
-        const token = data.authenticationResponse.token;
-        localStorage.setItem('authToken', token);
+      const token = data.authenticationResponse?.token;
+      const role = data.authenticationResponse?.role;
 
-        const decoded = parseJwt(token);
-        if (!decoded) {
-          throw new Error('Failed to decode token');
-        }
+      if (!token || !role) {
+        throw new Error('Invalid authentication response');
+      }
 
-        const role = decoded.role;
-        const userId = decoded.id;
-        const username = decoded.username;
+      localStorage.setItem('authToken', token);
 
-        console.log("Logged in as:", username, "with role:", role, "and user ID:", userId);
+      toast.success(`Login successful (${role})`);
 
-        toast.success(`Login successful as ${username} (${role})`);
-        
-        // Route to appropriate dashboard based on role
-        if (onLoginSuccess) {
-          onLoginSuccess(role as UserRole);
-        }
-        
-        // Navigate to role-specific page
-        switch (role) {
-          case "ADMIN":
-            navigate('/admin');
-            break;
-          case "RECEPTIONIST":
-            navigate('/receptionist');
-            break;
-          case "USER":
-            navigate('/user');
-            break;
-          default:
-            navigate('/');
-        }
-      } else {
-        throw new Error('No token received');
+      if (onLoginSuccess) {
+        onLoginSuccess(role as UserRole);
+      }
+
+      switch (role) {
+        case "ADMIN":
+          navigate('/admin');
+          break;
+        case "RECEPTIONIST":
+          navigate('/receptionist');
+          break;
+        case "USER":
+          navigate('/user');
+          break;
+        default:
+          navigate('/');
       }
     } catch (error) {
       console.error("Login failed:", error);
@@ -154,7 +142,7 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
         throw new Error('Registration failed');
       }
 
-      toast.success(`Registration successful! You can now login as ${values.role}.`);
+      toast.success(`Registration successful! You can now login as ${values.role}`);
       setActiveTab("login");
       registerForm.reset();
     } catch (error) {
@@ -177,10 +165,10 @@ export function AuthModal({ open, onOpenChange, onLoginSuccess }: AuthModalProps
           <DialogDescription>Hotel & Lodge Management System</DialogDescription>
         </DialogHeader>
 
-        <Tabs 
-          defaultValue="login" 
-          value={activeTab} 
-          onValueChange={(v) => setActiveTab(v as "login" | "register")} 
+        <Tabs
+          defaultValue="login"
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as "login" | "register")}
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-2 mb-6">
