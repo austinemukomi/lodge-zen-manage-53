@@ -1,7 +1,15 @@
 
 import { Button } from "@/components/ui/button";
-import { Bell, Search, LogOut, User } from "lucide-react";
+import { Bell, Search, LogOut, User, Settings } from "lucide-react";
 import { getUsername } from "@/utils/authUtils";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 
 interface HeaderProps {
   onLogout: () => void;
@@ -11,7 +19,7 @@ export function Header({ onLogout }: HeaderProps) {
   const username = getUsername() || "User";
 
   return (
-    <header className="flex h-14 items-center gap-4 border-b bg-white px-4 lg:px-6">
+    <header className="flex h-14 items-center gap-4 border-b bg-white px-4 lg:px-6 sticky top-0 z-10">
       <div className="w-full flex justify-between items-center">
         <div className="hidden lg:flex lg:w-[300px] lg:flex-col">
           <span className="text-lg font-semibold tracking-tight">LodgeMaster</span>
@@ -40,12 +48,30 @@ export function Header({ onLogout }: HeaderProps) {
               <span className="text-sm font-medium">{username}</span>
               <span className="text-xs text-gray-500">Online</span>
             </div>
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-              <User className="h-4 w-4" />
-            </div>
-            <Button variant="ghost" size="icon" onClick={onLogout}>
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <User className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={onLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>

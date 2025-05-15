@@ -9,7 +9,6 @@ import {
   ChevronRight, 
   Settings, 
   BarChart3,
-  LogOut,
   Home,
   Boxes,
   FileText,
@@ -23,7 +22,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ className }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  // Start with collapsed sidebar by default
+  const [collapsed, setCollapsed] = useState(true);
   const location = useLocation();
   const userRole = getUserRoleFromToken();
 
@@ -110,7 +110,7 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "bg-white border-r border-gray-200 transition-all duration-300 flex flex-col h-screen",
+        "bg-white border-r border-gray-200 transition-all duration-300 flex flex-col h-screen z-10",
         collapsed ? "w-20" : "w-64",
         className
       )}
@@ -148,24 +148,13 @@ export function Sidebar({ className }: SidebarProps) {
                   : "text-gray-700 hover:bg-gray-100",
                 collapsed ? "justify-center" : "justify-start"
               )}
+              title={collapsed ? item.name : ""}
             >
               {item.icon}
               {!collapsed && <span className="ml-3">{item.name}</span>}
             </Link>
           ))}
         </nav>
-      </div>
-
-      <div className="p-4 border-t border-gray-200">
-        <div
-          className={cn(
-            "flex items-center px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer",
-            collapsed ? "justify-center" : "justify-start"
-          )}
-        >
-          <LogOut className="h-5 w-5" />
-          {!collapsed && <span className="ml-3">Logout</span>}
-        </div>
       </div>
     </aside>
   );

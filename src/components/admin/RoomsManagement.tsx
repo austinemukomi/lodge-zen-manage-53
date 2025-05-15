@@ -25,7 +25,7 @@ export function RoomsManagement() {
           <h3 className="text-xl font-semibold text-gray-800">Room Management</h3>
           <p className="text-gray-600">Manage room categories, status and details</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button>
             <PlusCircle className="h-4 w-4 mr-2" /> Add Room
           </Button>
@@ -36,7 +36,7 @@ export function RoomsManagement() {
       </div>
 
       <Tabs defaultValue="status-board" value={activeRoomsTab} onValueChange={setActiveRoomsTab}>
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="status-board" className="flex items-center">
             <Home className="w-4 h-4 mr-2" />
             <span>Room Status Board</span>
@@ -116,13 +116,13 @@ export function RoomsManagement() {
               {roomCategories.map((category) => (
                 <Card key={category.id}>
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <h4 className="text-base font-medium">{category.name}</h4>
                         <p className="text-sm text-gray-600">{category.description}</p>
                         <p className="text-xs mt-1">Rooms: {category.count}</p>
                       </div>
-                      <div className="flex gap-2">
+                      <div>
                         <Button size="sm" variant="outline">
                           <Pencil className="h-4 w-4 mr-1" /> Edit
                         </Button>
