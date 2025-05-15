@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Room, RoomStatus } from "@/utils/types";
 import { 
@@ -8,98 +9,7 @@ import {
   Calendar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-// Sample data for rooms
-const sampleRooms: Room[] = [
-  {
-    id: "1",
-    number: "101",
-    type: "standard",
-    status: "available",
-    pricePerHour: 20,
-    pricePerDay: 100,
-    priceOvernight: 80,
-    floor: 1,
-    capacity: 2
-  },
-  {
-    id: "2",
-    number: "102",
-    type: "standard",
-    status: "occupied",
-    pricePerHour: 20,
-    pricePerDay: 100,
-    priceOvernight: 80,
-    floor: 1,
-    capacity: 2
-  },
-  {
-    id: "3",
-    number: "103",
-    type: "deluxe",
-    status: "cleaning",
-    pricePerHour: 30,
-    pricePerDay: 150,
-    priceOvernight: 120,
-    floor: 1,
-    capacity: 3
-  },
-  {
-    id: "4",
-    number: "201",
-    type: "suite",
-    status: "reserved",
-    pricePerHour: 50,
-    pricePerDay: 250,
-    priceOvernight: 200,
-    floor: 2,
-    capacity: 4
-  },
-  {
-    id: "5",
-    number: "202",
-    type: "standard",
-    status: "available",
-    pricePerHour: 20,
-    pricePerDay: 100,
-    priceOvernight: 80,
-    floor: 2,
-    capacity: 2
-  },
-  {
-    id: "6",
-    number: "203",
-    type: "deluxe",
-    status: "available",
-    pricePerHour: 30,
-    pricePerDay: 150,
-    priceOvernight: 120,
-    floor: 2,
-    capacity: 3
-  },
-  {
-    id: "7",
-    number: "301",
-    type: "suite",
-    status: "occupied",
-    pricePerHour: 50,
-    pricePerDay: 250,
-    priceOvernight: 200,
-    floor: 3,
-    capacity: 4
-  },
-  {
-    id: "8",
-    number: "302",
-    type: "standard",
-    status: "cleaning",
-    pricePerHour: 20,
-    pricePerDay: 100,
-    priceOvernight: 80,
-    floor: 3,
-    capacity: 2
-  }
-];
+import { useToast } from "@/components/ui/use-toast";
 
 interface RoomCardProps {
   room: Room;
@@ -144,7 +54,7 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
     >
       <div>
         <div className="flex justify-between items-start mb-3">
-          <h3 className="font-bold text-lg">Room {room.number}</h3>
+          <h3 className="font-bold text-lg">Room {room.roomNumber}</h3>
           <div className={cn(
             "px-2 py-0.5 rounded-full text-xs flex items-center",
             statusClasses[room.status]
@@ -157,17 +67,17 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
         <div className="space-y-2 mb-4">
           <div className="flex items-center text-gray-600 text-sm">
             <Bed className="w-4 h-4 mr-2" /> 
-            <span>{roomTypeLabel[room.type]}</span>
+            <span>{room.categoryName || "Standard"}</span>
           </div>
           
           <div className="flex items-center text-gray-600 text-sm">
             <Users className="w-4 h-4 mr-2" /> 
-            <span>Capacity: {room.capacity}</span>
+            <span>Capacity: {room.maxOccupancy || 2}</span>
           </div>
           
           <div className="flex items-center text-gray-600 text-sm">
             <Clock className="w-4 h-4 mr-2" /> 
-            <span>${room.pricePerHour}/hour • ${room.pricePerDay}/day</span>
+            <span>${room.baseHourlyRate}/hour • ${room.baseDailyRate}/day</span>
           </div>
         </div>
       </div>
@@ -190,10 +100,37 @@ interface RoomGridProps {
 }
 
 export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
-  const [rooms] = useState<Room[]>(sampleRooms);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   const [filter, setFilter] = useState<RoomStatus | "all">("all");
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  const fetchRooms = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("http://localhost:8080/api/rooms");
+      if (!response.ok) {
+        throw new Error("Failed to fetch rooms");
+      }
+      const data = await response.json();
+      setRooms(data);
+    } catch (error) {
+      console.error("Error fetching rooms:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load rooms. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRoomClick = (room: Room) => {
     console.log("Room clicked:", room);
     // Open room details modal or navigate to room details page
@@ -211,6 +148,10 @@ export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
   
   // Get unique floors
   const floors = [...new Set(rooms.map(room => room.floor))];
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-40">Loading rooms...</div>;
+  }
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -280,9 +221,15 @@ export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {filteredRooms.map((room) => (
-          <RoomCard key={room.id} room={room} onClick={handleRoomClick} />
-        ))}
+        {filteredRooms.length > 0 ? (
+          filteredRooms.map((room) => (
+            <RoomCard key={room.id} room={room} onClick={handleRoomClick} />
+          ))
+        ) : (
+          <div className="col-span-full text-center py-8 text-gray-500">
+            No rooms match the current filters
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -32,24 +33,56 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, PlusCircle, Pencil, Trash2 } from "lucide-react";
+import { Search, PlusCircle, Pencil, Trash2, RefreshCw } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+
+interface Employee {
+  id: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  role: string;
+  status: string;
+}
 
 export function EmployeeManagement() {
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterRole, setFilterRole] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("");
+  const { toast } = useToast();
 
-  const employees = [
-    { id: "E001", name: "James Wilson", email: "james@example.com", phone: "+263 77 123 4567", role: "RECEPTIONIST", status: "active" },
-    { id: "E002", name: "Linda Smith", email: "linda@example.com", phone: "+263 77 234 5678", role: "RECEPTIONIST", status: "active" },
-    { id: "E003", name: "Robert Brown", email: "robert@example.com", phone: "+263 77 345 6789", role: "CLEANER", status: "inactive" },
-    { id: "E004", name: "Patricia Davis", email: "patricia@example.com", phone: "+263 77 456 7890", role: "ADMIN", status: "active" },
-    { id: "E005", name: "Michael Johnson", email: "michael@example.com", phone: "+263 77 567 8901", role: "CLEANER", status: "active" },
-  ];
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+  const fetchEmployees = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("http://localhost:8080/api/admin/users");
+      if (!response.ok) {
+        throw new Error("Failed to fetch employees");
+      }
+      const data = await response.json();
+      setEmployees(data);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load employees. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,27 +101,57 @@ export function EmployeeManagement() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-          
         },
         body: JSON.stringify(payload),
       });
 
       if (response.ok) {
-        console.log("Employee added successfully");
-        // Optionally reset form
+        toast({
+          title: "Success",
+          description: "Employee added successfully!",
+        });
+        
+        // Reset form
         setName("");
         setEmail("");
         setPhoneNumber("");
         setPassword("");
         setRole("");
         setIsAddEmployeeOpen(false);
+        
+        // Refresh employee list
+        await fetchEmployees();
       } else {
-        console.error("Failed to add employee");
+        throw new Error("Failed to add employee");
       }
     } catch (error) {
       console.error("Error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add employee. Please try again.",
+        variant: "destructive",
+      });
     }
   };
+
+  const filteredEmployees = employees.filter(employee => {
+    // Filter by role
+    if (filterRole !== "all" && employee.role !== filterRole) {
+      return false;
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        employee.name.toLowerCase().includes(query) ||
+        employee.email.toLowerCase().includes(query) ||
+        employee.phoneNumber.includes(query)
+      );
+    }
+    
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -98,6 +161,9 @@ export function EmployeeManagement() {
           <p className="text-gray-600">Add, edit and manage staff members</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="icon" onClick={fetchEmployees} title="Refresh employee list">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
           <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -204,10 +270,30 @@ export function EmployeeManagement() {
         <div>
           <h4 className="text-sm font-medium mb-1">Filter by role:</h4>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">All</Button>
-            <Button variant="outline" size="sm">Admin</Button>
-            <Button variant="outline" size="sm" className="bg-primary/10">Receptionist</Button>
-            <Button variant="outline" size="sm">Cleaner</Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className={filterRole === "all" ? "bg-primary/10" : ""}
+              onClick={() => setFilterRole("all")}
+            >All</Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className={filterRole === "ADMIN" ? "bg-primary/10" : ""}
+              onClick={() => setFilterRole("ADMIN")}
+            >Admin</Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className={filterRole === "RECEPTIONIST" ? "bg-primary/10" : ""}
+              onClick={() => setFilterRole("RECEPTIONIST")}
+            >Receptionist</Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className={filterRole === "CLEANER" ? "bg-primary/10" : ""}
+              onClick={() => setFilterRole("CLEANER")}
+            >Cleaner</Button>
           </div>
         </div>
 
@@ -217,6 +303,8 @@ export function EmployeeManagement() {
             type="search"
             placeholder="Search employees..."
             className="w-full pl-8 h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
@@ -226,56 +314,68 @@ export function EmployeeManagement() {
           <CardTitle className="text-base font-medium">Employee Directory</CardTitle>
         </CardHeader>
         <CardContent className="p-4">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {employees.map((employee) => (
-                  <TableRow key={employee.id}>
-                    <TableCell className="font-medium">{employee.id}</TableCell>
-                    <TableCell>{employee.name}</TableCell>
-                    <TableCell>{employee.email}</TableCell>
-                    <TableCell>{employee.phone}</TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
-                        ${employee.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' :
-                          employee.role === 'RECEPTIONIST' ? 'bg-blue-100 text-blue-800' :
-                            'bg-green-100 text-green-800'}`}>
-                        {employee.role.charAt(0) + employee.role.slice(1).toLowerCase()}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
-                        ${employee.status === 'active' ? 'bg-green-100 text-green-800' :
-                          'bg-gray-100 text-gray-800'}`}>
-                        {employee.status.charAt(0).toUpperCase() + employee.status.slice(1)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1">
-                        <Button variant="ghost" size="sm">
-                          <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
-                        </Button>
-                      </div>
-                    </TableCell>
+          {loading ? (
+            <div className="flex justify-center items-center h-40">Loading employees...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredEmployees.length > 0 ? (
+                    filteredEmployees.map((employee) => (
+                      <TableRow key={employee.id}>
+                        <TableCell className="font-medium">{employee.id}</TableCell>
+                        <TableCell>{employee.name}</TableCell>
+                        <TableCell>{employee.email}</TableCell>
+                        <TableCell>{employee.phoneNumber}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                            ${employee.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' :
+                              employee.role === 'RECEPTIONIST' ? 'bg-blue-100 text-blue-800' :
+                                'bg-green-100 text-green-800'}`}>
+                            {employee.role.charAt(0) + employee.role.slice(1).toLowerCase()}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
+                            ${employee.status === 'active' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'}`}>
+                            {employee.status.charAt(0).toUpperCase() + employee.status.slice(1)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-1">
+                            <Button variant="ghost" size="sm">
+                              <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-24 text-center">
+                        No employees found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
