@@ -54,7 +54,7 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
     >
       <div>
         <div className="flex justify-between items-start mb-3">
-          <h3 className="font-bold text-lg">Room {room.roomNumber}</h3>
+          <h3 className="font-bold text-lg">Room {room.number}</h3>
           <div className={cn(
             "px-2 py-0.5 rounded-full text-xs flex items-center",
             statusClasses[room.status]
@@ -67,17 +67,17 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
         <div className="space-y-2 mb-4">
           <div className="flex items-center text-gray-600 text-sm">
             <Bed className="w-4 h-4 mr-2" /> 
-            <span>{room.categoryName || "Standard"}</span>
+            <span>{roomTypeLabel[room.type] || "Standard"}</span>
           </div>
           
           <div className="flex items-center text-gray-600 text-sm">
             <Users className="w-4 h-4 mr-2" /> 
-            <span>Capacity: {room.maxOccupancy || 2}</span>
+            <span>Capacity: {room.capacity || 2}</span>
           </div>
           
           <div className="flex items-center text-gray-600 text-sm">
             <Clock className="w-4 h-4 mr-2" /> 
-            <span>${room.baseHourlyRate}/hour • ${room.baseDailyRate}/day</span>
+            <span>${room.pricePerHour}/hour • ${room.pricePerDay}/day</span>
           </div>
         </div>
       </div>
