@@ -1,27 +1,31 @@
-
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -29,12 +33,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, PlusCircle, Pencil, Trash2 } from "lucide-react";
-import { UserRole } from "@/utils/types";
 
 export function EmployeeManagement() {
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
-  
-  // Mock employee data
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("");
+
   const employees = [
     { id: "E001", name: "James Wilson", email: "james@example.com", phone: "+263 77 123 4567", role: "RECEPTIONIST", status: "active" },
     { id: "E002", name: "Linda Smith", email: "linda@example.com", phone: "+263 77 234 5678", role: "RECEPTIONIST", status: "active" },
@@ -43,10 +51,43 @@ export function EmployeeManagement() {
     { id: "E005", name: "Michael Johnson", email: "michael@example.com", phone: "+263 77 567 8901", role: "CLEANER", status: "active" },
   ];
 
-  const handleAddEmployee = (e: React.FormEvent) => {
+  const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle adding employee logic here
-    setIsAddEmployeeOpen(false);
+
+    const payload = {
+      username: name,
+      email,
+      phoneNumber,
+      password,
+      role,
+    };
+
+    try {
+      const response = await fetch("http://localhost:8080/api/auth/register-employee", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+          
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        console.log("Employee added successfully");
+        // Optionally reset form
+        setName("");
+        setEmail("");
+        setPhoneNumber("");
+        setPassword("");
+        setRole("");
+        setIsAddEmployeeOpen(false);
+      } else {
+        console.error("Failed to add employee");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
   };
 
   return (
@@ -76,25 +117,47 @@ export function EmployeeManagement() {
                     <Label htmlFor="name" className="text-right">
                       Name
                     </Label>
-                    <Input id="name" className="col-span-3" placeholder="Full name" required />
+                    <Input
+                      id="name"
+                      className="col-span-3"
+                      placeholder="Full name"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="email" className="text-right">
                       Email
                     </Label>
-                    <Input id="email" type="email" className="col-span-3" placeholder="Email address" required />
+                    <Input
+                      id="email"
+                      type="email"
+                      className="col-span-3"
+                      placeholder="Email address"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="phone" className="text-right">
                       Phone
                     </Label>
-                    <Input id="phone" className="col-span-3" placeholder="Phone number" required />
+                    <Input
+                      id="phone"
+                      className="col-span-3"
+                      placeholder="Phone number"
+                      required
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                    />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="role" className="text-right">
                       Role
                     </Label>
-                    <Select required>
+                    <Select required value={role} onValueChange={setRole}>
                       <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Select a role" />
                       </SelectTrigger>
@@ -110,11 +173,23 @@ export function EmployeeManagement() {
                     <Label htmlFor="password" className="text-right">
                       Password
                     </Label>
-                    <Input id="password" type="password" className="col-span-3" placeholder="Set initial password" required />
+                    <Input
+                      id="password"
+                      type="password"
+                      className="col-span-3"
+                      placeholder="Set initial password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsAddEmployeeOpen(false)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsAddEmployeeOpen(false)}
+                  >
                     Cancel
                   </Button>
                   <Button type="submit">Save Employee</Button>
@@ -124,7 +199,7 @@ export function EmployeeManagement() {
           </Dialog>
         </div>
       </div>
-      
+
       <div className="flex flex-col md:flex-row justify-between gap-4 mb-4">
         <div>
           <h4 className="text-sm font-medium mb-1">Filter by role:</h4>
@@ -135,7 +210,7 @@ export function EmployeeManagement() {
             <Button variant="outline" size="sm">Cleaner</Button>
           </div>
         </div>
-        
+
         <div className="relative w-full md:w-64">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
           <input
@@ -145,7 +220,7 @@ export function EmployeeManagement() {
           />
         </div>
       </div>
-      
+
       <Card>
         <CardHeader className="p-4 pb-0">
           <CardTitle className="text-base font-medium">Employee Directory</CardTitle>
@@ -173,15 +248,15 @@ export function EmployeeManagement() {
                     <TableCell>{employee.phone}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
-                        ${employee.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 
-                          employee.role === 'RECEPTIONIST' ? 'bg-blue-100 text-blue-800' : 
-                          'bg-green-100 text-green-800'}`}>
+                        ${employee.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' :
+                          employee.role === 'RECEPTIONIST' ? 'bg-blue-100 text-blue-800' :
+                            'bg-green-100 text-green-800'}`}>
                         {employee.role.charAt(0) + employee.role.slice(1).toLowerCase()}
                       </span>
                     </TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
-                        ${employee.status === 'active' ? 'bg-green-100 text-green-800' : 
+                        ${employee.status === 'active' ? 'bg-green-100 text-green-800' :
                           'bg-gray-100 text-gray-800'}`}>
                         {employee.status.charAt(0).toUpperCase() + employee.status.slice(1)}
                       </span>
