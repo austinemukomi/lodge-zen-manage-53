@@ -39,10 +39,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         <Header onLogout={onLogout} />
         
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-gray-800">Admin Dashboard</h2>
-            <p className="text-gray-600">Manage your hotel operations, rooms, bookings and staff</p>
-          </div>
+          
           
           <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6">
