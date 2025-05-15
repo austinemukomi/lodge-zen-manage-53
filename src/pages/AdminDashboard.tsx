@@ -49,8 +49,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         <Header onLogout={handleLogout} />
         
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          
-          
           <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6">
               <TabsTrigger value="overview" className="flex items-center">

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Pencil, Home, List, Upload } from "lucide-react";
+import { PlusCircle, Pencil, Home, List, Upload, Trash2, Power, RefreshCw } from "lucide-react";
 import { RoomGrid } from "@/components/dashboard/RoomGrid";
 import { StatusLegend } from "@/components/dashboard/StatusLegend";
 import { RoomType, RoomStatus } from "@/utils/types";
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/components/ui/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 // Type definitions for forms
 interface CategoryFormValues {
@@ -24,7 +25,7 @@ interface CategoryFormValues {
   baseDailyRate: number;
   overnightRate: number;
   maxOccupancy: number;
-  amenities: string;
+  amenities: string[];
   weekendSurcharge: number;
   refundableDeposit: number;
   minimumBookingHours: number;
@@ -32,6 +33,36 @@ interface CategoryFormValues {
 }
 
 interface RoomFormValues {
+  roomNumber: string;
+  categoryId: string;
+  status: RoomStatus;
+  floor: number;
+  specialFeatures: string;
+  weekendSurcharge: number;
+  refundableDeposit: number;
+  minimumBookingHours: number;
+  active: boolean;
+}
+
+interface RoomCategory {
+  id: string;
+  name: string;
+  description: string;
+  baseHourlyRate: number;
+  baseDailyRate: number;
+  overnightRate: number;
+  maxOccupancy: number;
+  amenities: string[];
+  weekendSurcharge: number;
+  refundableDeposit: number;
+  minimumBookingHours: number;
+  active: boolean;
+  images?: string[];
+  roomCount?: number;
+}
+
+interface Room {
+  id: string;
   roomNumber: string;
   categoryId: string;
   status: RoomStatus;
@@ -66,8 +97,11 @@ export function RoomsManagement() {
   const [activeRoomsTab, setActiveRoomsTab] = useState("status-board");
   const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const [addRoomOpen, setAddRoomOpen] = useState(false);
-  const [roomCategories, setRoomCategories] = useState([]);
+  const [editCategoryOpen, setEditCategoryOpen] = useState(false);
+  const [roomCategories, setRoomCategories] = useState<RoomCategory[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<RoomCategory | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -102,7 +136,23 @@ export function RoomsManagement() {
       baseDailyRate: 0,
       overnightRate: 0,
       maxOccupancy: 2,
-      amenities: "",
+      amenities: [],
+      weekendSurcharge: 0,
+      refundableDeposit: 0,
+      minimumBookingHours: 1,
+      active: true
+    }
+  });
+
+  const editCategoryForm = useForm<CategoryFormValues>({
+    defaultValues: {
+      name: "",
+      description: "",
+      baseHourlyRate: 0,
+      baseDailyRate: 0,
+      overnightRate: 0,
+      maxOccupancy: 2,
+      amenities: [],
       weekendSurcharge: 0,
       refundableDeposit: 0,
       minimumBookingHours: 1,
@@ -115,7 +165,7 @@ export function RoomsManagement() {
     defaultValues: {
       roomNumber: "",
       categoryId: "",
-      status: "available",
+      status: "AVAILABLE",
       floor: 1,
       specialFeatures: "",
       weekendSurcharge: 0,
@@ -162,6 +212,44 @@ export function RoomsManagement() {
     }
   };
 
+  const handleEditCategorySubmit = async (data: CategoryFormValues) => {
+    if (!selectedCategory) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/room-categories/${selectedCategory.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update category");
+      }
+
+      toast({
+        title: "Category Updated",
+        description: `${data.name} category has been updated successfully.`,
+      });
+      
+      setEditCategoryOpen(false);
+      editCategoryForm.reset();
+      // Refresh the categories list
+      await fetchRoomCategories();
+    } catch (error) {
+      console.error("Error updating category:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update category. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleRoomSubmit = async (data: RoomFormValues) => {
     setIsLoading(true);
     try {
@@ -184,6 +272,7 @@ export function RoomsManagement() {
       
       setAddRoomOpen(false);
       roomForm.reset();
+      await fetchRoomCategories();
     } catch (error) {
       console.error("Error adding room:", error);
       toast({
@@ -194,6 +283,194 @@ export function RoomsManagement() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCategoryImageUpload = async (categoryId: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    
+    setUploading(true);
+    
+    try {
+      const formData = new FormData();
+      
+      // Append all selected files to the FormData
+      for (let i = 0; i < files.length; i++) {
+        formData.append('images', files[i]);
+      }
+      
+      const response = await fetch(`http://localhost:8080/api/room-categories/${categoryId}/images`, {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to upload images");
+      }
+      
+      toast({
+        title: "Images Uploaded",
+        description: "Category images have been uploaded successfully.",
+      });
+      
+      // Refresh the categories list to show updated images
+      await fetchRoomCategories();
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      toast({
+        title: "Error",
+        description: "Failed to upload images. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/room-categories/${categoryId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete category");
+      }
+
+      toast({
+        title: "Category Deleted",
+        description: "The room category has been deleted successfully.",
+      });
+      
+      // Refresh the categories list
+      await fetchRoomCategories();
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete category. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const toggleCategoryStatus = async (categoryId: string, currentStatus: boolean) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/room-categories/${categoryId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ active: !currentStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update category status");
+      }
+
+      toast({
+        title: "Status Updated",
+        description: `Category status has been ${!currentStatus ? "activated" : "deactivated"} successfully.`,
+      });
+      
+      // Refresh the categories list
+      await fetchRoomCategories();
+    } catch (error) {
+      console.error("Error updating category status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update category status. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteImage = async (categoryId: string, imageUrl: string) => {
+    try {
+      const fileName = imageUrl.split('/').pop();
+      if (!fileName) return;
+      
+      const response = await fetch(`http://localhost:8080/api/room-categories/${categoryId}/images`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ fileName }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete image");
+      }
+
+      toast({
+        title: "Image Deleted",
+        description: "The image has been deleted successfully.",
+      });
+      
+      // Refresh the categories list
+      await fetchRoomCategories();
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete image. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateRoomStatus = async (roomId: string, newStatus: RoomStatus) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/rooms/${roomId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update room status");
+      }
+
+      toast({
+        title: "Room Status Updated",
+        description: `Room status has been updated to ${newStatus.toLowerCase()}.`,
+      });
+      
+      // Refresh the data
+      await fetchRoomCategories();
+    } catch (error) {
+      console.error("Error updating room status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update room status. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditCategory = (category: RoomCategory) => {
+    setSelectedCategory(category);
+    editCategoryForm.reset({
+      name: category.name,
+      description: category.description,
+      baseHourlyRate: category.baseHourlyRate,
+      baseDailyRate: category.baseDailyRate,
+      overnightRate: category.overnightRate,
+      maxOccupancy: category.maxOccupancy,
+      amenities: category.amenities || [],
+      weekendSurcharge: category.weekendSurcharge,
+      refundableDeposit: category.refundableDeposit,
+      minimumBookingHours: category.minimumBookingHours,
+      active: category.active
+    });
+    setEditCategoryOpen(true);
   };
 
   return (
@@ -486,18 +763,40 @@ export function RoomsManagement() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Amenities</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select 
+                          onValueChange={(value) => {
+                            if (!field.value.includes(value)) {
+                              field.onChange([...field.value, value]);
+                            }
+                          }}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Select amenities" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {amenitiesOptions.map((amenity) => (
+                            {amenitiesOptions.filter(amenity => !field.value.includes(amenity)).map((amenity) => (
                               <SelectItem key={amenity} value={amenity}>{amenity}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {field.value.map(amenity => (
+                            <div key={amenity} className="bg-gray-100 px-2 py-1 rounded-md flex items-center">
+                              <span className="text-sm">{amenity}</span>
+                              <button 
+                                type="button" 
+                                className="ml-2 text-gray-500 hover:text-red-500"
+                                onClick={() => {
+                                  field.onChange(field.value.filter(a => a !== amenity));
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -568,25 +867,267 @@ export function RoomsManagement() {
                     )}
                   />
                   
-                  <div className="space-y-4">
-                    <FormLabel>Category Images</FormLabel>
-                    <div className="flex items-center justify-center w-full">
-                      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <Upload className="w-8 h-8 mb-2 text-gray-500" />
-                          <p className="mb-2 text-sm text-gray-500">
-                            <span className="font-semibold">Click to upload</span> or drag and drop
-                          </p>
-                          <p className="text-xs text-gray-500">SVG, PNG, JPG or GIF (MAX. 2MB)</p>
-                        </div>
-                        <input id="dropzone-file" type="file" className="hidden" multiple />
-                      </label>
-                    </div>
-                  </div>
-                  
                   <DialogFooter>
                     <Button type="submit" disabled={isLoading}>
                       {isLoading ? "Saving..." : "Save Category"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={editCategoryOpen} onOpenChange={setEditCategoryOpen}>
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit Room Category</DialogTitle>
+              </DialogHeader>
+              <Form {...editCategoryForm}>
+                <form onSubmit={editCategoryForm.handleSubmit(handleEditCategorySubmit)} className="space-y-4">
+                  <FormField
+                    control={editCategoryForm.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. Standard, Deluxe, Suite" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editCategoryForm.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Describe this room category" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={editCategoryForm.control}
+                      name="baseHourlyRate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Hourly Rate ($)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editCategoryForm.control}
+                      name="baseDailyRate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Daily Rate ($)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={editCategoryForm.control}
+                      name="overnightRate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Overnight Rate ($)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={editCategoryForm.control}
+                    name="maxOccupancy"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Maximum Occupancy</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editCategoryForm.control}
+                    name="amenities"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Amenities</FormLabel>
+                        <Select 
+                          onValueChange={(value) => {
+                            if (!field.value.includes(value)) {
+                              field.onChange([...field.value, value]);
+                            }
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select amenities" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {amenitiesOptions.filter(amenity => !field.value.includes(amenity)).map((amenity) => (
+                              <SelectItem key={amenity} value={amenity}>{amenity}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {field.value.map(amenity => (
+                            <div key={amenity} className="bg-gray-100 px-2 py-1 rounded-md flex items-center">
+                              <span className="text-sm">{amenity}</span>
+                              <button 
+                                type="button" 
+                                className="ml-2 text-gray-500 hover:text-red-500"
+                                onClick={() => {
+                                  field.onChange(field.value.filter(a => a !== amenity));
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FormField
+                      control={editCategoryForm.control}
+                      name="weekendSurcharge"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Weekend Surcharge ($)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={editCategoryForm.control}
+                      name="refundableDeposit"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Refundable Deposit ($)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={editCategoryForm.control}
+                      name="minimumBookingHours"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Min. Booking Hours</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={editCategoryForm.control}
+                    name="active"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel>Active</FormLabel>
+                          <FormDescription>
+                            This category will be available for room assignments if active.
+                          </FormDescription>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {selectedCategory && (
+                    <div className="space-y-4">
+                      <FormLabel>Category Images</FormLabel>
+                      {/* Show existing images */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {selectedCategory.images && selectedCategory.images.map((img, index) => (
+                          <div key={index} className="relative group">
+                            <img 
+                              src={img} 
+                              alt={`${selectedCategory.name} ${index+1}`} 
+                              className="w-full h-24 object-cover rounded-md"
+                            />
+                            <button 
+                              type="button"
+                              onClick={() => handleDeleteImage(selectedCategory.id, img)}
+                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Upload new images */}
+                      <div className="flex items-center justify-center w-full">
+                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                          <div className="flex flex-col items-center justify-center pt-3 pb-3">
+                            <Upload className="w-6 h-6 mb-1 text-gray-500" />
+                            <p className="text-sm text-gray-500">
+                              <span className="font-semibold">Click to upload</span>
+                            </p>
+                            <p className="text-xs text-gray-500">PNG, JPG or GIF (MAX. 2MB)</p>
+                          </div>
+                          <input
+                            type="file"
+                            className="hidden"
+                            multiple
+                            onChange={(e) => handleCategoryImageUpload(selectedCategory.id, e.target.files)}
+                            disabled={uploading}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <DialogFooter>
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading ? "Updating..." : "Update Category"}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -611,7 +1152,7 @@ export function RoomsManagement() {
         <TabsContent value="status-board" className="space-y-4 mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-3">
-              <RoomGrid />
+              <RoomGrid onStatusUpdate={updateRoomStatus} />
             </div>
             
             <div className="space-y-6">
@@ -652,14 +1193,14 @@ export function RoomsManagement() {
                   <CardTitle className="text-base font-medium">Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0 space-y-2">
-                  <Button variant="outline" size="sm" className="w-full justify-start">
-                    Update Room Status
+                  <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => setActiveRoomsTab("categories")}>
+                    Manage Categories
+                  </Button>
+                  <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => setAddRoomOpen(true)}>
+                    Add New Room
                   </Button>
                   <Button variant="outline" size="sm" className="w-full justify-start">
-                    Assign Room to Guest
-                  </Button>
-                  <Button variant="outline" size="sm" className="w-full justify-start">
-                    Request Room Cleaning
+                    Check Room Availability
                   </Button>
                 </CardContent>
               </Card>
@@ -679,19 +1220,76 @@ export function RoomsManagement() {
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <h4 className="text-base font-medium">{category.name}</h4>
-                        <p className="text-sm text-gray-600">{category.description}</p>
-                        <p className="text-xs mt-1">Rooms: {category.roomCount || 0}</p>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-base font-medium">{category.name}</h4>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${category.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                            {category.active ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">{category.description}</p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {category.amenities && category.amenities.map((amenity, i) => (
+                            <span key={i} className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                              {amenity}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-xs mt-2">Rooms: {category.roomCount || 0} | Base Rate: ${category.baseHourlyRate}/hr</p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                         <Button size="sm" variant="outline" onClick={() => setAddRoomOpen(true)}>
                           <PlusCircle className="h-4 w-4 mr-1" /> Add Room
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => handleEditCategory(category)}>
                           <Pencil className="h-4 w-4 mr-1" /> Edit
                         </Button>
+                        <Button 
+                          size="sm" 
+                          variant={category.active ? "outline" : "default"}
+                          onClick={() => toggleCategoryStatus(category.id, category.active)}
+                        >
+                          <Power className="h-4 w-4 mr-1" /> {category.active ? 'Deactivate' : 'Activate'}
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="sm" variant="destructive">
+                              <Trash2 className="h-4 w-4 mr-1" /> Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete the {category.name} category and cannot be undone.
+                                Any rooms assigned to this category will be affected.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteCategory(category.id)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
+                    
+                    {/* Display category images if available */}
+                    {category.images && category.images.length > 0 && (
+                      <div className="mt-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {category.images.map((img, index) => (
+                            <img 
+                              key={index} 
+                              src={img} 
+                              alt={`${category.name} ${index+1}`}
+                              className="h-20 w-full object-cover rounded-md" 
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               ))}
