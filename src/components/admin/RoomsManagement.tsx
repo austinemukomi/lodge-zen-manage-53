@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,18 +43,55 @@ interface RoomFormValues {
   active: boolean;
 }
 
+// Available amenities options
+const amenitiesOptions = [
+  "WiFi",
+  "Air Conditioning",
+  "TV",
+  "Mini Bar",
+  "Refrigerator",
+  "Safe",
+  "Balcony",
+  "Ocean View",
+  "City View",
+  "Coffee Maker",
+  "Room Service",
+  "Private Bathroom",
+  "King Bed",
+  "Queen Bed",
+  "Twin Beds"
+];
+
 export function RoomsManagement() {
   const [activeRoomsTab, setActiveRoomsTab] = useState("status-board");
   const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const [addRoomOpen, setAddRoomOpen] = useState(false);
+  const [roomCategories, setRoomCategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  
-  // Mock room categories data
-  const roomCategories = [
-    { id: "1", name: "Standard", description: "Basic room with essential amenities", count: 25 },
-    { id: "2", name: "Deluxe", description: "Spacious room with premium features", count: 15 },
-    { id: "3", name: "Suite", description: "Luxurious suite with separate living area", count: 5 },
-  ];
+
+  useEffect(() => {
+    fetchRoomCategories();
+  }, []);
+
+  // Fetch room categories from API
+  const fetchRoomCategories = async () => {
+    try {
+      const response = await fetch("http://localhost:8080/api/room-categories");
+      if (!response.ok) {
+        throw new Error("Failed to fetch room categories");
+      }
+      const data = await response.json();
+      setRoomCategories(data);
+    } catch (error) {
+      console.error("Error fetching room categories:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load room categories. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Category form setup
   const categoryForm = useForm<CategoryFormValues>({
@@ -89,24 +126,74 @@ export function RoomsManagement() {
   });
 
   // Form submission handlers
-  const handleCategorySubmit = (data: CategoryFormValues) => {
-    console.log("Category form submitted:", data);
-    toast({
-      title: "Category Added",
-      description: `${data.name} category has been added successfully.`,
-    });
-    setAddCategoryOpen(false);
-    categoryForm.reset();
+  const handleCategorySubmit = async (data: CategoryFormValues) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("http://localhost:8080/api/room-categories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add category");
+      }
+
+      toast({
+        title: "Category Added",
+        description: `${data.name} category has been added successfully.`,
+      });
+      
+      setAddCategoryOpen(false);
+      categoryForm.reset();
+      // Refresh the categories list
+      await fetchRoomCategories();
+    } catch (error) {
+      console.error("Error adding category:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add category. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRoomSubmit = (data: RoomFormValues) => {
-    console.log("Room form submitted:", data);
-    toast({
-      title: "Room Added",
-      description: `Room ${data.roomNumber} has been added successfully.`,
-    });
-    setAddRoomOpen(false);
-    roomForm.reset();
+  const handleRoomSubmit = async (data: RoomFormValues) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/rooms?categoryId=${data.categoryId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add room");
+      }
+
+      toast({
+        title: "Room Added",
+        description: `Room ${data.roomNumber} has been added successfully.`,
+      });
+      
+      setAddRoomOpen(false);
+      roomForm.reset();
+    } catch (error) {
+      console.error("Error adding room:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add room. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -286,7 +373,9 @@ export function RoomsManagement() {
                   />
                   
                   <DialogFooter>
-                    <Button type="submit">Save Room</Button>
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading ? "Saving..." : "Save Room"}
+                    </Button>
                   </DialogFooter>
                 </form>
               </Form>
@@ -397,9 +486,18 @@ export function RoomsManagement() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Amenities</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="List amenities separated by commas" {...field} />
-                        </FormControl>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select amenities" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {amenitiesOptions.map((amenity) => (
+                              <SelectItem key={amenity} value={amenity}>{amenity}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -487,7 +585,9 @@ export function RoomsManagement() {
                   </div>
                   
                   <DialogFooter>
-                    <Button type="submit">Save Category</Button>
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading ? "Saving..." : "Save Category"}
+                    </Button>
                   </DialogFooter>
                 </form>
               </Form>
@@ -581,7 +681,7 @@ export function RoomsManagement() {
                       <div>
                         <h4 className="text-base font-medium">{category.name}</h4>
                         <p className="text-sm text-gray-600">{category.description}</p>
-                        <p className="text-xs mt-1">Rooms: {category.count}</p>
+                        <p className="text-xs mt-1">Rooms: {category.roomCount || 0}</p>
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline" onClick={() => setAddRoomOpen(true)}>

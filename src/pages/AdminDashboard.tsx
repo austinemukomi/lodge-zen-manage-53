@@ -23,6 +23,7 @@ import { RoomsManagement } from "@/components/admin/RoomsManagement";
 import { BookingsTable } from "@/components/admin/BookingsTable";
 import { EmployeeManagement } from "@/components/admin/EmployeeManagement";
 import { ReportsPanel } from "@/components/admin/ReportsPanel";
+import { useToast } from "@/components/ui/use-toast";
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -30,13 +31,22 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState("overview");
+  const { toast } = useToast();
+  
+  const handleLogout = () => {
+    toast({
+      title: "Logged Out",
+      description: "You have been successfully logged out.",
+    });
+    onLogout();
+  };
 
   return (
     <div className="flex h-screen bg-[#F9FAFB]">
       <Sidebar />
       
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header onLogout={onLogout} />
+        <Header onLogout={handleLogout} />
         
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           
