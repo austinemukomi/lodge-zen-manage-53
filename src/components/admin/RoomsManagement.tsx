@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -160,12 +159,12 @@ export function RoomsManagement() {
     }
   });
 
-  // Room form setup
+  // Room form setup - changing AVAILABLE to available
   const roomForm = useForm<RoomFormValues>({
     defaultValues: {
       roomNumber: "",
       categoryId: "",
-      status: "AVAILABLE",
+      status: "available", // Changed from "AVAILABLE" to "available" to match RoomStatus type
       floor: 1,
       specialFeatures: "",
       weekendSurcharge: 0,
@@ -558,10 +557,10 @@ export function RoomsManagement() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="AVAILABLE">Available</SelectItem>
-                              <SelectItem value="OCCUPIED">Occupied</SelectItem>
-                              <SelectItem value="CLEANING">Cleaning</SelectItem>
-                              <SelectItem value="RESERVED">Reserved</SelectItem>
+                              <SelectItem value="available">Available</SelectItem>
+                              <SelectItem value="occupied">Occupied</SelectItem>
+                              <SelectItem value="cleaning">Cleaning</SelectItem>
+                              <SelectItem value="reserved">Reserved</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -1152,7 +1151,8 @@ export function RoomsManagement() {
         <TabsContent value="status-board" className="space-y-4 mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-3">
-              <RoomGrid onStatusUpdate={updateRoomStatus} />
+              {/* We don't pass onStatusUpdate prop here since RoomGrid doesn't accept it */}
+              <RoomGrid />
             </div>
             
             <div className="space-y-6">

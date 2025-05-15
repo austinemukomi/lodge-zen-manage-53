@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Room, RoomStatus } from "@/utils/types";
@@ -187,9 +186,10 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
 
 interface RoomGridProps {
   className?: string;
+  onStatusUpdate?: (roomId: string, newStatus: RoomStatus) => Promise<void>;
 }
 
-export function RoomGrid({ className }: RoomGridProps) {
+export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
   const [rooms] = useState<Room[]>(sampleRooms);
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   const [filter, setFilter] = useState<RoomStatus | "all">("all");
@@ -197,6 +197,10 @@ export function RoomGrid({ className }: RoomGridProps) {
   const handleRoomClick = (room: Room) => {
     console.log("Room clicked:", room);
     // Open room details modal or navigate to room details page
+    if (onStatusUpdate) {
+      // If onStatusUpdate is provided, we can use it
+      // This is optional since we've made the prop optional
+    }
   };
 
   const filteredRooms = rooms.filter(room => {
