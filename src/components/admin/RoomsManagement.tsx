@@ -1228,12 +1228,17 @@ export function RoomsManagement() {
                         </div>
                         <p className="text-sm text-gray-600 mt-1">{category.description}</p>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {category.amenities && category.amenities.map((amenity, i) => (
-                            <span key={i} className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">
-                              {amenity}
-                            </span>
-                          ))}
-                        </div>
+                            {Array.isArray(category.amenities) &&
+                              category.amenities.map((amenity, i) => (
+                                <span
+                                  key={i}
+                                  className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full"
+                                >
+                                  {amenity}
+                                </span>
+                              ))}
+                          </div>
+
                         <p className="text-xs mt-2">Rooms: {category.roomCount || 0} | Base Rate: ${category.baseHourlyRate}/hr</p>
                       </div>
                       <div className="flex gap-2 flex-wrap sm:flex-nowrap">
