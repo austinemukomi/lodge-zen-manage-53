@@ -9,7 +9,11 @@ import {
   ChevronRight, 
   Settings, 
   BarChart3,
-  LogOut
+  LogOut,
+  Home,
+  Boxes,
+  FileText,
+  PlusCircle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getUserRoleFromToken } from "@/utils/authUtils";
@@ -33,11 +37,36 @@ export function Sidebar({ className }: SidebarProps) {
       {
         name: "Dashboard",
         path: "/",
-        icon: <Bed className="w-5 h-5" />,
+        icon: <Home className="w-5 h-5" />,
       }
     ];
 
-    if (userRole === "ADMIN" || userRole === "RECEPTIONIST") {
+    if (userRole === "ADMIN") {
+      baseItems.push(
+        {
+          name: "Rooms",
+          path: "/rooms",
+          icon: <Boxes className="w-5 h-5" />,
+        },
+        {
+          name: "Bookings",
+          path: "/bookings",
+          icon: <Calendar className="w-5 h-5" />,
+        },
+        {
+          name: "Employees",
+          path: "/employees",
+          icon: <Users className="w-5 h-5" />,
+        },
+        {
+          name: "Reports",
+          path: "/reports",
+          icon: <BarChart3 className="w-5 h-5" />,
+        }
+      );
+    }
+
+    if (userRole === "RECEPTIONIST") {
       baseItems.push(
         {
           name: "Bookings",
@@ -52,12 +81,17 @@ export function Sidebar({ className }: SidebarProps) {
       );
     }
 
-    if (userRole === "ADMIN") {
+    if (userRole === "USER") {
       baseItems.push(
         {
-          name: "Reports",
-          path: "/reports",
-          icon: <BarChart3 className="w-5 h-5" />,
+          name: "My Bookings",
+          path: "/user/bookings",
+          icon: <Calendar className="w-5 h-5" />,
+        },
+        {
+          name: "Book Room",
+          path: "/user/book",
+          icon: <PlusCircle className="w-5 h-5" />,
         }
       );
     }

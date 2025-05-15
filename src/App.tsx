@@ -8,7 +8,7 @@ import { useState } from "react";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
-import Dashboard from "./pages/Index";
+import AdminDashboard from "./pages/AdminDashboard";
 import Bookings from "./pages/Bookings";
 import NotFound from "./pages/NotFound";
 import UserDashboard from "./pages/UserDashboard";
@@ -61,8 +61,8 @@ const App = () => {
               {/* Admin routes */}
               {userRole === "ADMIN" && (
                 <>
-                  <Route path="/" element={<Dashboard onLogout={handleLogout} />} />
-                  <Route path="/admin" element={<Dashboard onLogout={handleLogout} />} />
+                  <Route path="/" element={<AdminDashboard onLogout={handleLogout} />} />
+                  <Route path="/admin" element={<AdminDashboard onLogout={handleLogout} />} />
                   <Route path="/bookings" element={<Bookings onLogout={handleLogout} />} />
                 </>
               )}
