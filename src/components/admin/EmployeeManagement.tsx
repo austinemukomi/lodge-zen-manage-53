@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, ReactNode } from "react";
 import {
   Card,
   CardContent,
@@ -37,6 +37,7 @@ import { Search, PlusCircle, Pencil, Trash2, RefreshCw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 interface Employee {
+  username: ReactNode;
   id: string;
   name: string;
   email: string;
@@ -322,11 +323,10 @@ export function EmployeeManagement() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Name</TableHead>
+                    <TableHead>Username</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -335,7 +335,7 @@ export function EmployeeManagement() {
                     filteredEmployees.map((employee) => (
                       <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.id}</TableCell>
-                        <TableCell>{employee.name}</TableCell>
+                        <TableCell>{employee.username}</TableCell>
                         <TableCell>{employee.email}</TableCell>
                         <TableCell>{employee.phoneNumber}</TableCell>
                         <TableCell>
@@ -346,13 +346,7 @@ export function EmployeeManagement() {
                             {employee.role.charAt(0) + employee.role.slice(1).toLowerCase()}
                           </span>
                         </TableCell>
-                        <TableCell>
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium
-                            ${employee.status === 'active' ? 'bg-green-100 text-green-800' :
-                              'bg-gray-100 text-gray-800'}`}>
-                            {employee.status.charAt(0).toUpperCase() + employee.status.slice(1)}
-                          </span>
-                        </TableCell>
+                
                         <TableCell>
                           <div className="flex items-center space-x-1">
                             <Button variant="ghost" size="sm">
