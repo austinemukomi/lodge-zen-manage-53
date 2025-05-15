@@ -137,49 +137,50 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
 
   return (
     <div 
-      className={cn("room-card", room.status)}
+      className={cn(
+        "room-card border rounded-lg p-4 shadow-sm flex flex-col justify-between h-full",
+        `border-l-4 border-l-${room.status === 'available' ? 'green' : room.status === 'occupied' ? 'red' : room.status === 'cleaning' ? 'yellow' : 'blue'}-500`
+      )}
       onClick={() => onClick(room)}
     >
-      <div className="flex justify-between items-start">
-        <h3 className="font-bold text-lg">Room {room.number}</h3>
-        <div className={cn(
-          "status-badge",
-          room.status
-        )}>
-          <div className="flex items-center">
+      <div>
+        <div className="flex justify-between items-start mb-3">
+          <h3 className="font-bold text-lg">Room {room.number}</h3>
+          <div className={cn(
+            "px-2 py-0.5 rounded-full text-xs flex items-center",
+            statusClasses[room.status]
+          )}>
             {statusIcon[room.status]}
             <span>{statusLabel[room.status]}</span>
           </div>
         </div>
+        
+        <div className="space-y-2 mb-4">
+          <div className="flex items-center text-gray-600 text-sm">
+            <Bed className="w-4 h-4 mr-2" /> 
+            <span>{roomTypeLabel[room.type]}</span>
+          </div>
+          
+          <div className="flex items-center text-gray-600 text-sm">
+            <Users className="w-4 h-4 mr-2" /> 
+            <span>Capacity: {room.capacity}</span>
+          </div>
+          
+          <div className="flex items-center text-gray-600 text-sm">
+            <Clock className="w-4 h-4 mr-2" /> 
+            <span>${room.pricePerHour}/hour • ${room.pricePerDay}/day</span>
+          </div>
+        </div>
       </div>
       
-      <div className="mt-2">
-        <div className="flex items-center text-gray-600 text-sm mt-2">
-          <Bed className="w-4 h-4 mr-2" /> 
-          <span>{roomTypeLabel[room.type]}</span>
-        </div>
-        
-        <div className="flex items-center text-gray-600 text-sm mt-2">
-          <Users className="w-4 h-4 mr-2" /> 
-          <span>Capacity: {room.capacity}</span>
-        </div>
-        
-        <div className="flex items-center text-gray-600 text-sm mt-2">
-          <Clock className="w-4 h-4 mr-2" /> 
-          <span>${room.pricePerHour}/hour • ${room.pricePerDay}/day</span>
-        </div>
-      </div>
-      
-      <div className="mt-3">
-        <Button 
-          variant={room.status === "available" ? "default" : "outline"}
-          size="sm"
-          className="w-full"
-          disabled={room.status !== "available"}
-        >
-          {room.status === "available" ? "Book Now" : statusLabel[room.status]}
-        </Button>
-      </div>
+      <Button 
+        variant={room.status === "available" ? "default" : "outline"}
+        size="sm"
+        className="w-full mt-2"
+        disabled={room.status !== "available"}
+      >
+        {room.status === "available" ? "Book Now" : statusLabel[room.status]}
+      </Button>
     </div>
   );
 };
@@ -209,8 +210,8 @@ export function RoomGrid({ className }: RoomGridProps) {
 
   return (
     <div className={cn("space-y-6", className)}>
-      <div className="flex flex-wrap justify-between items-center gap-4">
-        <div className="flex items-center space-x-2">
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={selectedFloor === null ? "default" : "outline"}
             size="sm"
@@ -231,7 +232,7 @@ export function RoomGrid({ className }: RoomGridProps) {
           ))}
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={filter === "all" ? "default" : "outline"}
             size="sm"
@@ -274,7 +275,7 @@ export function RoomGrid({ className }: RoomGridProps) {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {filteredRooms.map((room) => (
           <RoomCard key={room.id} room={room} onClick={handleRoomClick} />
         ))}
