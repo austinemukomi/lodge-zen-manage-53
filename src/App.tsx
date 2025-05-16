@@ -81,6 +81,8 @@ const App = () => {
                 <>
                   <Route path="/" element={<UserDashboard onLogout={handleLogout} />} />
                   <Route path="/user" element={<UserDashboard onLogout={handleLogout} />} />
+                  <Route path="/user/bookings" element={<UserDashboard onLogout={handleLogout} />} />
+                  <Route path="/user/book" element={<UserDashboard onLogout={handleLogout} />} />
                 </>
               )}
               

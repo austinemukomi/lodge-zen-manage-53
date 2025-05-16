@@ -1,0 +1,363 @@
+
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { Search, UserCheck, UserX } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+interface CheckInOutFormProps {
+  onComplete?: () => void;
+  fullPage?: boolean;
+}
+
+export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, fullPage = false }) => {
+  const [activeTab, setActiveTab] = useState("check-in");
+  const [bookingCode, setBookingCode] = useState("");
+  const [roomNumber, setRoomNumber] = useState("");
+  const [guestName, setGuestName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [foundBooking, setFoundBooking] = useState<any | null>(null);
+  const { toast } = useToast();
+  
+  // Mock bookings data
+  const checkInBookings = [
+    { id: "B001", guest: "John Smith", room: "102", checkIn: "May 15, 2023, 2:00 PM", checkOut: "May 18, 2023, 12:00 PM", status: "confirmed" },
+    { id: "B002", guest: "Emma Johnson", room: "205", checkIn: "May 15, 2023, 3:00 PM", checkOut: "May 16, 2023, 11:00 AM", status: "confirmed" },
+    { id: "B003", guest: "Michael Davis", room: "303", checkIn: "May 15, 2023, 4:30 PM", checkOut: "May 17, 2023, 10:00 AM", status: "confirmed" },
+  ];
+  
+  const checkOutBookings = [
+    { id: "B004", guest: "Sarah Wilson", room: "105", checkIn: "May 13, 2023, 2:00 PM", checkOut: "May 15, 2023, 12:00 PM", status: "checked-in" },
+    { id: "B005", guest: "Thomas Lee", room: "210", checkIn: "May 14, 2023, 1:00 PM", checkOut: "May 15, 2023, 11:00 AM", status: "checked-in" },
+    { id: "B006", guest: "Jessica Brown", room: "401", checkIn: "May 12, 2023, 3:30 PM", checkOut: "May 15, 2023, 10:00 AM", status: "checked-in" },
+  ];
+  
+  const handleSearch = () => {
+    setLoading(true);
+    
+    // Simulate API call
+    setTimeout(() => {
+      const searchByCode = bookingCode.trim() !== "";
+      const searchTerm = searchByCode ? bookingCode : guestName || roomNumber;
+      
+      let found = null;
+      
+      if (activeTab === "check-in") {
+        found = checkInBookings.find((booking) => 
+          searchByCode ? booking.id === searchTerm : 
+          guestName ? booking.guest.toLowerCase().includes(searchTerm.toLowerCase()) :
+          booking.room === searchTerm
+        );
+      } else {
+        found = checkOutBookings.find((booking) => 
+          searchByCode ? booking.id === searchTerm : 
+          guestName ? booking.guest.toLowerCase().includes(searchTerm.toLowerCase()) :
+          booking.room === searchTerm
+        );
+      }
+      
+      if (found) {
+        setFoundBooking(found);
+      } else {
+        toast({
+          title: "No booking found",
+          description: "Could not find a booking matching your search criteria.",
+          variant: "destructive"
+        });
+        setFoundBooking(null);
+      }
+      
+      setLoading(false);
+    }, 1000);
+  };
+  
+  const handleProcess = async () => {
+    if (!foundBooking) return;
+    
+    setLoading(true);
+    
+    try {
+      // In a real app, we would call the API to check in/out the guest
+      // For now, we'll simulate success
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      if (activeTab === "check-in") {
+        // Update room status to occupied
+        if (foundBooking.room) {
+          // Find the room ID from the room number
+          const roomId = foundBooking.room; // This would normally come from an API lookup
+          
+          // Call API to update status
+          await fetch(`http://localhost:8080/api/rooms/${roomId}/status`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ status: "OCCUPIED" })
+          });
+        }
+        
+        toast({
+          title: "Check-in Successful",
+          description: `${foundBooking.guest} has been checked in to Room ${foundBooking.room}.`
+        });
+      } else {
+        // Update room status to cleaning
+        if (foundBooking.room) {
+          // Find the room ID from the room number
+          const roomId = foundBooking.room; // This would normally come from an API lookup
+          
+          // Call API to update status
+          await fetch(`http://localhost:8080/api/rooms/${roomId}/status`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ status: "CLEANING" })
+          });
+        }
+        
+        toast({
+          title: "Check-out Successful",
+          description: `${foundBooking.guest} has been checked out from Room ${foundBooking.room}.`
+        });
+      }
+      
+      // Reset form
+      setBookingCode("");
+      setRoomNumber("");
+      setGuestName("");
+      setFoundBooking(null);
+      
+      if (onComplete) {
+        onComplete();
+      }
+    } catch (error) {
+      console.error(`Error during ${activeTab}:`, error);
+      toast({
+        title: `${activeTab === "check-in" ? "Check-in" : "Check-out"} Failed`,
+        description: "There was an error processing your request. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <div className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-2 w-full">
+          <TabsTrigger value="check-in" className="flex items-center">
+            <UserCheck className="w-4 h-4 mr-2" />
+            <span>Check-In</span>
+          </TabsTrigger>
+          <TabsTrigger value="check-out" className="flex items-center">
+            <UserX className="w-4 h-4 mr-2" />
+            <span>Check-Out</span>
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="check-in" className="space-y-4 pt-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="bookingCode">Booking Code</Label>
+              <Input
+                id="bookingCode"
+                placeholder="Enter booking code"
+                value={bookingCode}
+                onChange={(e) => setBookingCode(e.target.value)}
+              />
+            </div>
+            
+            <div className="text-center">
+              <p className="text-gray-500">- OR -</p>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="roomNumber">Room Number</Label>
+                <Input
+                  id="roomNumber"
+                  placeholder="e.g. 101"
+                  value={roomNumber}
+                  onChange={(e) => setRoomNumber(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="guestName">Guest Name</Label>
+                <Input
+                  id="guestName"
+                  placeholder="Guest name"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <Button onClick={handleSearch} disabled={loading || (!bookingCode && !roomNumber && !guestName)}>
+              {loading ? "Searching..." : "Search"}
+            </Button>
+          </div>
+          
+          {fullPage && (
+            <Card className="mt-6">
+              <div className="p-4">
+                <h3 className="font-medium mb-4">Today's Expected Check-ins</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Booking ID</TableHead>
+                      <TableHead>Guest</TableHead>
+                      <TableHead>Room</TableHead>
+                      <TableHead>Check-in Time</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {checkInBookings.map(booking => (
+                      <TableRow key={booking.id}>
+                        <TableCell>{booking.id}</TableCell>
+                        <TableCell>{booking.guest}</TableCell>
+                        <TableCell>{booking.room}</TableCell>
+                        <TableCell>{booking.checkIn}</TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm" onClick={() => {
+                            setFoundBooking(booking);
+                          }}>
+                            Check-in
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="check-out" className="space-y-4 pt-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="bookingCodeOut">Booking Code</Label>
+              <Input
+                id="bookingCodeOut"
+                placeholder="Enter booking code"
+                value={bookingCode}
+                onChange={(e) => setBookingCode(e.target.value)}
+              />
+            </div>
+            
+            <div className="text-center">
+              <p className="text-gray-500">- OR -</p>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="roomNumberOut">Room Number</Label>
+                <Input
+                  id="roomNumberOut"
+                  placeholder="e.g. 101"
+                  value={roomNumber}
+                  onChange={(e) => setRoomNumber(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="guestNameOut">Guest Name</Label>
+                <Input
+                  id="guestNameOut"
+                  placeholder="Guest name"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <Button onClick={handleSearch} disabled={loading || (!bookingCode && !roomNumber && !guestName)}>
+              {loading ? "Searching..." : "Search"}
+            </Button>
+          </div>
+          
+          {fullPage && (
+            <Card className="mt-6">
+              <div className="p-4">
+                <h3 className="font-medium mb-4">Today's Expected Check-outs</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Booking ID</TableHead>
+                      <TableHead>Guest</TableHead>
+                      <TableHead>Room</TableHead>
+                      <TableHead>Check-out Time</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {checkOutBookings.map(booking => (
+                      <TableRow key={booking.id}>
+                        <TableCell>{booking.id}</TableCell>
+                        <TableCell>{booking.guest}</TableCell>
+                        <TableCell>{booking.room}</TableCell>
+                        <TableCell>{booking.checkOut}</TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm" onClick={() => {
+                            setFoundBooking(booking);
+                          }}>
+                            Check-out
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+      
+      {foundBooking && (
+        <Card className="p-4 border-2 border-primary mt-6">
+          <h3 className="font-medium text-lg mb-3">
+            {activeTab === "check-in" ? "Check-in Details" : "Check-out Details"}
+          </h3>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">Booking ID</p>
+                <p className="font-medium">{foundBooking.id}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Room Number</p>
+                <p className="font-medium">{foundBooking.room}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Guest Name</p>
+                <p className="font-medium">{foundBooking.guest}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">{activeTab === "check-in" ? "Check-in Time" : "Check-out Time"}</p>
+                <p className="font-medium">{activeTab === "check-in" ? foundBooking.checkIn : foundBooking.checkOut}</p>
+              </div>
+            </div>
+            
+            <div className="pt-4 border-t flex justify-end">
+              <Button onClick={handleProcess} disabled={loading} className="min-w-[150px]">
+                {loading ? 
+                  (activeTab === "check-in" ? "Checking In..." : "Checking Out...") : 
+                  (activeTab === "check-in" ? "Complete Check-in" : "Complete Check-out")
+                }
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+};

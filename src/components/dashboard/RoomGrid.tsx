@@ -29,9 +29,11 @@ import {
 interface RoomCardProps {
   room: Room;
   onStatusChange: (roomId: string, newStatus: RoomStatus) => Promise<void>;
+  bookingEnabled?: boolean;
+  onBookRoom?: (roomId: string) => void;
 }
 
-const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange }) => {
+const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange, bookingEnabled = false, onBookRoom }) => {
   const [isEditingStatus, setIsEditingStatus] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<RoomStatus>(room.status);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,10 +47,10 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange }) => {
   };
 
   const statusIcon = {
-    available: <div className="w-3 h-3 bg-room-available rounded-full animate-status-pulse mr-1.5" />,
-    occupied: <div className="w-3 h-3 bg-room-occupied rounded-full animate-status-pulse mr-1.5" />,
-    cleaning: <div className="w-3 h-3 bg-room-cleaning rounded-full animate-status-pulse mr-1.5" />,
-    reserved: <div className="w-3 h-3 bg-room-reserved rounded-full animate-status-pulse mr-1.5" />,
+    available: <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse mr-1.5" />,
+    occupied: <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse mr-1.5" />,
+    cleaning: <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse mr-1.5" />,
+    reserved: <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse mr-1.5" />,
   };
 
   const roomTypeLabel = {
@@ -84,6 +86,12 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange }) => {
     }
   };
 
+  const handleBookRoom = () => {
+    if (onBookRoom) {
+      onBookRoom(room.id);
+    }
+  };
+
   return (
     <div 
       className={cn(
@@ -102,43 +110,63 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange }) => {
               {statusIcon[room.status]}
               <span>{statusLabel[room.status]}</span>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => setIsEditingStatus(true)}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
+            {!bookingEnabled && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => setIsEditingStatus(true)}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
         
         <div className="space-y-2 mb-4">
           <div className="flex items-center text-gray-600 text-sm">
             <Bed className="w-4 h-4 mr-2" /> 
-            <span>{room.type ? roomTypeLabel[room.type] : "Standard"}</span>
+            <span>{room.category?.name || (room.type ? roomTypeLabel[room.type] : "Standard")}</span>
           </div>
           
           <div className="flex items-center text-gray-600 text-sm">
             <Users className="w-4 h-4 mr-2" /> 
-            <span>Capacity: {room.capacity || 2}</span>
+            <span>Capacity: {room.maxOccupancy || room.capacity || 2}</span>
           </div>
           
           <div className="flex items-center text-gray-600 text-sm">
             <Clock className="w-4 h-4 mr-2" /> 
-            <span>${room.pricePerHour}/hour • ${room.pricePerDay}/day</span>
+            <span>${room.baseHourlyRate || room.pricePerHour || 25}/hour • ${room.baseDailyRate || room.pricePerDay || 100}/day</span>
           </div>
+          
+          {room.specialFeatures && (
+            <div className="text-gray-600 text-sm mt-2">
+              <p className="italic">{room.specialFeatures}</p>
+            </div>
+          )}
         </div>
       </div>
       
-      <Button 
-        variant={room.status === "available" ? "default" : "outline"}
-        size="sm"
-        className="w-full mt-2"
-        disabled={room.status !== "available"}
-      >
-        {room.status === "available" ? "Book Now" : statusLabel[room.status]}
-      </Button>
+      {bookingEnabled ? (
+        <Button 
+          variant={room.status === "available" ? "default" : "outline"}
+          size="sm"
+          className="w-full mt-2"
+          disabled={room.status !== "available"}
+          onClick={handleBookRoom}
+        >
+          {room.status === "available" ? "Book Now" : "Not Available"}
+        </Button>
+      ) : (
+        <Button 
+          variant={room.status === "available" ? "default" : "outline"}
+          size="sm"
+          className="w-full mt-2"
+          disabled={room.status !== "available"}
+        >
+          {room.status === "available" ? "Assign Room" : statusLabel[room.status]}
+        </Button>
+      )}
 
       <Dialog open={isEditingStatus} onOpenChange={setIsEditingStatus}>
         <DialogContent>
@@ -179,18 +207,33 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange }) => {
 interface RoomGridProps {
   className?: string;
   onStatusUpdate?: (roomId: string, newStatus: RoomStatus) => Promise<void>;
+  filterStatus?: RoomStatus | "all";
+  bookingEnabled?: boolean;
+  onBookRoom?: (roomId: string) => void;
 }
 
-export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
+export function RoomGrid({ 
+  className, 
+  onStatusUpdate,
+  filterStatus = "all",
+  bookingEnabled = false,
+  onBookRoom
+}: RoomGridProps) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
-  const [filter, setFilter] = useState<RoomStatus | "all">("all");
+  const [filter, setFilter] = useState<RoomStatus | "all">(filterStatus);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
   useEffect(() => {
     fetchRooms();
   }, []);
+
+  useEffect(() => {
+    if (filterStatus !== "all") {
+      setFilter(filterStatus);
+    }
+  }, [filterStatus]);
 
   const fetchRooms = async () => {
     try {
@@ -202,18 +245,28 @@ export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
       const data = await response.json();
       
       // Convert API response to match our Room type
-      const formattedRooms = data.map((room: any) => ({
-        id: room.id.toString(),
-        number: room.roomNumber,
-        type: room.category?.name?.toLowerCase().includes("deluxe") ? "deluxe" : 
-              room.category?.name?.toLowerCase().includes("suite") ? "suite" : "standard",
-        status: room.status.toLowerCase() as RoomStatus,
-        pricePerHour: room.baseHourlyRate || 25,
-        pricePerDay: room.baseDailyRate || 100,
-        floor: room.floor,
-        capacity: room.maxOccupancy || 2,
-        lastCleaned: room.lastCleanedAt ? new Date(room.lastCleanedAt) : undefined,
-      }));
+      const formattedRooms = data.map((room: any) => {
+        // Convert the room status to lowercase for our component
+        const status = room.status.toLowerCase() as RoomStatus;
+        
+        return {
+          id: room.id.toString(),
+          number: room.roomNumber,
+          type: room.category?.name?.toLowerCase().includes("deluxe") ? "deluxe" : 
+                room.category?.name?.toLowerCase().includes("suite") ? "suite" : "standard",
+          status,
+          pricePerHour: room.baseHourlyRate || 25,
+          pricePerDay: room.baseDailyRate || 100,
+          floor: room.floor,
+          capacity: room.maxOccupancy || 2,
+          lastCleaned: room.lastCleanedAt ? new Date(room.lastCleanedAt) : undefined,
+          category: room.category,
+          baseHourlyRate: room.baseHourlyRate || 25,
+          baseDailyRate: room.baseDailyRate || 100,
+          maxOccupancy: room.maxOccupancy || 2,
+          specialFeatures: room.specialFeatures
+        };
+      });
       
       setRooms(formattedRooms);
     } catch (error) {
@@ -265,6 +318,17 @@ export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
   // Get unique floors
   const floors = [...new Set(rooms.map(room => room.floor))];
 
+  const handleBookRoom = (roomId: string) => {
+    if (onBookRoom) {
+      onBookRoom(roomId);
+    } else {
+      toast({
+        title: "Booking Initiated",
+        description: "Please complete the booking form to reserve this room."
+      });
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-40">Loading rooms...</div>;
   }
@@ -305,7 +369,7 @@ export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
             variant={filter === "available" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("available")}
-            className="border-room-available text-room-available hover:bg-green-50"
+            className="text-green-700 border-green-200 hover:bg-green-50"
           >
             Available
           </Button>
@@ -313,7 +377,7 @@ export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
             variant={filter === "occupied" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("occupied")}
-            className="border-room-occupied text-room-occupied hover:bg-red-50"
+            className="text-red-700 border-red-200 hover:bg-red-50"
           >
             Occupied
           </Button>
@@ -321,7 +385,7 @@ export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
             variant={filter === "cleaning" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("cleaning")}
-            className="border-room-cleaning text-room-cleaning hover:bg-yellow-50"
+            className="text-yellow-700 border-yellow-200 hover:bg-yellow-50"
           >
             Cleaning
           </Button>
@@ -329,7 +393,7 @@ export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
             variant={filter === "reserved" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("reserved")}
-            className="border-room-reserved text-room-reserved hover:bg-blue-50"
+            className="text-blue-700 border-blue-200 hover:bg-blue-50"
           >
             Reserved
           </Button>
@@ -343,6 +407,8 @@ export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
               key={room.id} 
               room={room} 
               onStatusChange={onStatusUpdate || handleStatusUpdate}
+              bookingEnabled={bookingEnabled}
+              onBookRoom={handleBookRoom}
             />
           ))
         ) : (
