@@ -1,7 +1,7 @@
 
 export type UserRole = "ADMIN" | "RECEPTIONIST" | "USER" | "CLEANER";
 
-export type RoomStatus = "available" | "occupied" | "cleaning" | "reserved";
+export type RoomStatus = "AVAILABLE" | "OCCUPIED" | "CLEANING" | "RESERVED";
 
 export type RoomType = "standard" | "deluxe" | "suite";
 

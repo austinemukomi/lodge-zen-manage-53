@@ -164,7 +164,7 @@ export function RoomsManagement() {
     defaultValues: {
       roomNumber: "",
       categoryId: "",
-      status: "available", // Changed from "AVAILABLE" to "available" to match RoomStatus type
+      status: "AVAILABLE", // Changed from "AVAILABLE" to "available" to match RoomStatus type
       floor: 1,
       specialFeatures: "",
       weekendSurcharge: 0,
@@ -557,10 +557,10 @@ export function RoomsManagement() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="available">Available</SelectItem>
-                              <SelectItem value="occupied">Occupied</SelectItem>
-                              <SelectItem value="cleaning">Cleaning</SelectItem>
-                              <SelectItem value="reserved">Reserved</SelectItem>
+                              <SelectItem value="AVAILABLE">Available</SelectItem>
+                              <SelectItem value="OCCUPIED">Occupied</SelectItem>
+                              <SelectItem value="CLEANING">Cleaning</SelectItem>
+                              <SelectItem value="RESERVED">Reserved</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
