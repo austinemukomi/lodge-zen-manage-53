@@ -1,3 +1,4 @@
+
 export type UserRole = "ADMIN" | "RECEPTIONIST" | "USER" | "CLEANER";
 
 export type RoomStatus = "available" | "occupied" | "cleaning" | "reserved";
@@ -15,9 +16,16 @@ export interface User {
   email: string;
 }
 
+export interface RoomCategory {
+  id: number;
+  name: string;
+  description: string;
+}
+
 export interface Room {
   id: string;
   number: string;
+  roomNumber?: string; // Added to match API response
   type: RoomType;
   status: RoomStatus;
   pricePerHour: number;
@@ -26,6 +34,14 @@ export interface Room {
   floor: number;
   capacity: number;
   lastCleaned?: Date;
+  
+  // Additional properties from API response
+  category?: RoomCategory;
+  baseHourlyRate?: number;
+  baseDailyRate?: number;
+  maxOccupancy?: number;
+  specialFeatures?: string;
+  lastCleanedAt?: string;
 }
 
 export interface Guest {
