@@ -6,17 +6,37 @@ import {
   Bed, 
   Users, 
   Clock, 
-  Calendar
+  Calendar,
+  Edit
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface RoomCardProps {
   room: Room;
-  onClick: (room: Room) => void;
+  onStatusChange: (roomId: string, newStatus: RoomStatus) => Promise<void>;
 }
 
-const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
+const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange }) => {
+  const [isEditingStatus, setIsEditingStatus] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<RoomStatus>(room.status);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
   const statusClasses = {
     available: "bg-green-100 text-green-800",
     occupied: "bg-red-100 text-red-800",
@@ -44,30 +64,59 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
     reserved: "Reserved",
   };
 
+  const handleStatusChange = async () => {
+    try {
+      setIsSubmitting(true);
+      await onStatusChange(room.id, selectedStatus);
+      toast({
+        title: "Status Updated",
+        description: `Room ${room.number} status updated to ${statusLabel[selectedStatus]}`,
+      });
+      setIsEditingStatus(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update room status",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div 
       className={cn(
         "room-card border rounded-lg p-4 shadow-sm flex flex-col justify-between h-full",
         `border-l-4 border-l-${room.status === 'available' ? 'green' : room.status === 'occupied' ? 'red' : room.status === 'cleaning' ? 'yellow' : 'blue'}-500`
       )}
-      onClick={() => onClick(room)}
     >
       <div>
         <div className="flex justify-between items-start mb-3">
           <h3 className="font-bold text-lg">Room {room.number}</h3>
-          <div className={cn(
-            "px-2 py-0.5 rounded-full text-xs flex items-center",
-            statusClasses[room.status]
-          )}>
-            {statusIcon[room.status]}
-            <span>{statusLabel[room.status]}</span>
+          <div className="flex items-center gap-2">
+            <div className={cn(
+              "px-2 py-0.5 rounded-full text-xs flex items-center",
+              statusClasses[room.status]
+            )}>
+              {statusIcon[room.status]}
+              <span>{statusLabel[room.status]}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => setIsEditingStatus(true)}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
           </div>
         </div>
         
         <div className="space-y-2 mb-4">
           <div className="flex items-center text-gray-600 text-sm">
             <Bed className="w-4 h-4 mr-2" /> 
-            <span>{roomTypeLabel[room.type] || "Standard"}</span>
+            <span>{room.type ? roomTypeLabel[room.type] : "Standard"}</span>
           </div>
           
           <div className="flex items-center text-gray-600 text-sm">
@@ -90,6 +139,39 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onClick }) => {
       >
         {room.status === "available" ? "Book Now" : statusLabel[room.status]}
       </Button>
+
+      <Dialog open={isEditingStatus} onOpenChange={setIsEditingStatus}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Room Status</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Select 
+              value={selectedStatus} 
+              onValueChange={(value) => setSelectedStatus(value as RoomStatus)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select new status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="occupied">Occupied</SelectItem>
+                <SelectItem value="cleaning">Cleaning</SelectItem>
+                <SelectItem value="reserved">Reserved</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditingStatus(false)}>Cancel</Button>
+            <Button 
+              onClick={handleStatusChange} 
+              disabled={isSubmitting || selectedStatus === room.status}
+            >
+              {isSubmitting ? "Updating..." : "Update Status"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
@@ -118,7 +200,22 @@ export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
         throw new Error("Failed to fetch rooms");
       }
       const data = await response.json();
-      setRooms(data);
+      
+      // Convert API response to match our Room type
+      const formattedRooms = data.map((room: any) => ({
+        id: room.id.toString(),
+        number: room.roomNumber,
+        type: room.category?.name?.toLowerCase().includes("deluxe") ? "deluxe" : 
+              room.category?.name?.toLowerCase().includes("suite") ? "suite" : "standard",
+        status: room.status.toLowerCase() as RoomStatus,
+        pricePerHour: room.baseHourlyRate || 25,
+        pricePerDay: room.baseDailyRate || 100,
+        floor: room.floor,
+        capacity: room.maxOccupancy || 2,
+        lastCleaned: room.lastCleanedAt ? new Date(room.lastCleanedAt) : undefined,
+      }));
+      
+      setRooms(formattedRooms);
     } catch (error) {
       console.error("Error fetching rooms:", error);
       toast({
@@ -131,12 +228,31 @@ export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
     }
   };
 
-  const handleRoomClick = (room: Room) => {
-    console.log("Room clicked:", room);
-    // Open room details modal or navigate to room details page
-    if (onStatusUpdate) {
-      // If onStatusUpdate is provided, we can use it
-      // This is optional since we've made the prop optional
+  const handleStatusUpdate = async (roomId: string, newStatus: RoomStatus) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/rooms/${roomId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus.toUpperCase() }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update room status");
+      }
+
+      // Update local state
+      setRooms(prevRooms => 
+        prevRooms.map(room => 
+          room.id === roomId ? { ...room, status: newStatus } : room
+        )
+      );
+
+      return Promise.resolve();
+    } catch (error) {
+      console.error("Error updating room status:", error);
+      return Promise.reject(error);
     }
   };
 
@@ -223,7 +339,11 @@ export function RoomGrid({ className, onStatusUpdate }: RoomGridProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {filteredRooms.length > 0 ? (
           filteredRooms.map((room) => (
-            <RoomCard key={room.id} room={room} onClick={handleRoomClick} />
+            <RoomCard 
+              key={room.id} 
+              room={room} 
+              onStatusChange={onStatusUpdate || handleStatusUpdate}
+            />
           ))
         ) : (
           <div className="col-span-full text-center py-8 text-gray-500">
