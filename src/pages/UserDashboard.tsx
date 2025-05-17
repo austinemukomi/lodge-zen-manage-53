@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -191,7 +190,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <RoomGrid filterStatus="available" bookingEnabled={true} />
+                  <RoomGrid filterStatus="AVAILABLE" bookingEnabled={true} />
                 </CardContent>
               </Card>
             </TabsContent>

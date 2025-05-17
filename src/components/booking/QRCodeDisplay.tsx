@@ -17,8 +17,13 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ bookingId, onClose
   const handleCheckIn = async () => {
     try {
       setLoading(true);
-      // Call the check-in API
-      const response = await fetch(`http://localhost:8080/api/guest/check-in/by-code?bookingCode=${bookingId}`);
+      // Call the check-in API with POST method
+      const response = await fetch(`http://localhost:8080/api/guest/check-in/by-code?bookingCode=${bookingId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       
       if (!response.ok) {
         throw new Error("Check-in failed");
@@ -99,4 +104,3 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({ bookingId, onClose
     </div>
   );
 };
-

@@ -1,7 +1,8 @@
 
 export type UserRole = "ADMIN" | "RECEPTIONIST" | "USER" | "CLEANER";
 
-export type RoomStatus = "AVAILABLE" | "OCCUPIED" | "CLEANING" | "RESERVED";
+// Updated to match the actual case used in the API responses
+export type RoomStatus = "AVAILABLE" | "OCCUPIED" | "CLEANING" | "RESERVED" | "available" | "occupied" | "cleaning" | "reserved";
 
 export type RoomType = "standard" | "deluxe" | "suite";
 

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,15 +133,25 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
         let response;
         
         if (bookingCode) {
-          // Check in by code
-          response = await fetch(`http://localhost:8080/api/guest/check-in/by-code?bookingCode=${bookingCode}`);
+          // Check in by code - Using POST method
+          response = await fetch(`http://localhost:8080/api/guest/check-in/by-code?bookingCode=${bookingCode}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
         } else {
-          // Check in by details
+          // Check in by details - Using POST method
           const params = new URLSearchParams();
           if (roomNumber) params.append("roomNumber", roomNumber);
           if (guestName) params.append("guestName", guestName);
           
-          response = await fetch(`http://localhost:8080/api/guest/check-in/by-details?${params}`);
+          response = await fetch(`http://localhost:8080/api/guest/check-in/by-details?${params}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
         }
         
         if (!response.ok) {
@@ -444,4 +453,3 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
     </div>
   );
 };
-

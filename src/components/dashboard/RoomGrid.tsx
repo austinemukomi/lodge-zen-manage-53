@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Room, RoomStatus } from "@/utils/types";
@@ -39,6 +38,9 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange, bookingEnable
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  // Convert status to lowercase for consistency in UI
+  const normalizedStatus = room.status.toLowerCase() as "available" | "occupied" | "cleaning" | "reserved";
+
   const statusClasses = {
     available: "bg-green-100 text-green-800",
     occupied: "bg-red-100 text-red-800",
@@ -72,7 +74,7 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange, bookingEnable
       await onStatusChange(room.id, selectedStatus);
       toast({
         title: "Status Updated",
-        description: `Room ${room.number} status updated to ${statusLabel[selectedStatus]}`,
+        description: `Room ${room.number} status updated to ${selectedStatus}`,
       });
       setIsEditingStatus(false);
     } catch (error) {
@@ -92,11 +94,16 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange, bookingEnable
     }
   };
 
+  // Helper function to determine if a room is available
+  const isAvailable = () => {
+    return room.status === "AVAILABLE" || room.status === "available";
+  };
+
   return (
     <div 
       className={cn(
         "room-card border rounded-lg p-4 shadow-sm flex flex-col justify-between h-full",
-        `border-l-4 border-l-${room.status === 'available' ? 'green' : room.status === 'occupied' ? 'red' : room.status === 'cleaning' ? 'yellow' : 'blue'}-500`
+        `border-l-4 border-l-${normalizedStatus === 'available' ? 'green' : normalizedStatus === 'occupied' ? 'red' : normalizedStatus === 'cleaning' ? 'yellow' : 'blue'}-500`
       )}
     >
       <div>
@@ -105,10 +112,10 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange, bookingEnable
           <div className="flex items-center gap-2">
             <div className={cn(
               "px-2 py-0.5 rounded-full text-xs flex items-center",
-              statusClasses[room.status]
+              statusClasses[normalizedStatus]
             )}>
-              {statusIcon[room.status]}
-              <span>{statusLabel[room.status]}</span>
+              {statusIcon[normalizedStatus]}
+              <span>{statusLabel[normalizedStatus]}</span>
             </div>
             {!bookingEnabled && (
               <Button
@@ -149,22 +156,22 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange, bookingEnable
       
       {bookingEnabled ? (
         <Button 
-          variant={room.status === "available" ? "default" : "outline"}
+          variant={isAvailable() ? "default" : "outline"}
           size="sm"
           className="w-full mt-2"
-          disabled={room.status !== "available"}
+          disabled={!isAvailable()}
           onClick={handleBookRoom}
         >
-          {room.status === "available" ? "Book Now" : "Not Available"}
+          {isAvailable() ? "Book Now" : "Not Available"}
         </Button>
       ) : (
         <Button 
-          variant={room.status === "available" ? "default" : "outline"}
+          variant={isAvailable() ? "default" : "outline"}
           size="sm"
           className="w-full mt-2"
-          disabled={room.status !== "available"}
+          disabled={!isAvailable()}
         >
-          {room.status === "available" ? "Assign Room" : statusLabel[room.status]}
+          {isAvailable() ? "Assign Room" : statusLabel[normalizedStatus]}
         </Button>
       )}
 
@@ -182,10 +189,10 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange, bookingEnable
                 <SelectValue placeholder="Select new status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="occupied">Occupied</SelectItem>
-                <SelectItem value="cleaning">Cleaning</SelectItem>
-                <SelectItem value="reserved">Reserved</SelectItem>
+                <SelectItem value="AVAILABLE">Available</SelectItem>
+                <SelectItem value="OCCUPIED">Occupied</SelectItem>
+                <SelectItem value="CLEANING">Cleaning</SelectItem>
+                <SelectItem value="RESERVED">Reserved</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -246,8 +253,8 @@ export function RoomGrid({
       
       // Convert API response to match our Room type
       const formattedRooms = data.map((room: any) => {
-        // Convert the room status to lowercase for our component
-        const status = room.status.toLowerCase() as RoomStatus;
+        // Keep the original status format from API
+        const status = room.status as RoomStatus;
         
         return {
           id: room.id.toString(),
@@ -283,12 +290,18 @@ export function RoomGrid({
 
   const handleStatusUpdate = async (roomId: string, newStatus: RoomStatus) => {
     try {
+      // For RESERVED status, use a boolean value in the request body
+      const isReserved = newStatus === "RESERVED" || newStatus === "reserved";
+      
       const response = await fetch(`http://localhost:8080/api/rooms/${roomId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: newStatus.toUpperCase() }),
+        body: JSON.stringify({ 
+          status: newStatus.toUpperCase(),
+          reserved: isReserved // Add the boolean value for RESERVED status
+        }),
       });
 
       if (!response.ok) {
@@ -311,7 +324,12 @@ export function RoomGrid({
 
   const filteredRooms = rooms.filter(room => {
     if (selectedFloor && room.floor !== selectedFloor) return false;
-    if (filter !== "all" && room.status !== filter) return false;
+    if (filter !== "all") {
+      // Case insensitive comparison for status filtering
+      const normalizedRoomStatus = room.status.toUpperCase();
+      const normalizedFilter = filter.toUpperCase();
+      if (normalizedRoomStatus !== normalizedFilter) return false;
+    }
     return true;
   });
   
@@ -366,33 +384,33 @@ export function RoomGrid({
             All
           </Button>
           <Button
-            variant={filter === "available" ? "default" : "outline"}
+            variant={filter === "AVAILABLE" ? "default" : "outline"}
             size="sm"
-            onClick={() => setFilter("available")}
+            onClick={() => setFilter("AVAILABLE")}
             className="text-green-700 border-green-200 hover:bg-green-50"
           >
             Available
           </Button>
           <Button
-            variant={filter === "occupied" ? "default" : "outline"}
+            variant={filter === "OCCUPIED" ? "default" : "outline"}
             size="sm"
-            onClick={() => setFilter("occupied")}
+            onClick={() => setFilter("OCCUPIED")}
             className="text-red-700 border-red-200 hover:bg-red-50"
           >
             Occupied
           </Button>
           <Button
-            variant={filter === "cleaning" ? "default" : "outline"}
+            variant={filter === "CLEANING" ? "default" : "outline"}
             size="sm"
-            onClick={() => setFilter("cleaning")}
+            onClick={() => setFilter("CLEANING")}
             className="text-yellow-700 border-yellow-200 hover:bg-yellow-50"
           >
             Cleaning
           </Button>
           <Button
-            variant={filter === "reserved" ? "default" : "outline"}
+            variant={filter === "RESERVED" ? "default" : "outline"}
             size="sm"
-            onClick={() => setFilter("reserved")}
+            onClick={() => setFilter("RESERVED")}
             className="text-blue-700 border-blue-200 hover:bg-blue-50"
           >
             Reserved
