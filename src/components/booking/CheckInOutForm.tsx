@@ -42,15 +42,20 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
     
     try {
       if (bookingCode) {
-        // Check status by booking code
-        const response = await fetch(`http://localhost:8080/api/guest/status/${bookingCode}`);
+        // Use the booking details API to get information by booking code
+        const response = await fetch(`http://localhost:8080/api/guest/details/${bookingCode}`);
         
         if (!response.ok) {
           throw new Error("Failed to find booking");
         }
         
         const data = await response.json();
-        setFoundBooking(data);
+        setFoundBooking({
+          id: data.bookingId,
+          room: data.roomNumber,
+          guest: data.guestName,
+          checkIn: data.checkInTime
+        });
       } else {
         // Check by guest details
         const params = new URLSearchParams();
@@ -180,7 +185,8 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
         });
       } else {
         
-        await fetch(`http://localhost:8080/api/guest/check-out?bookingCode=${foundBooking.code}`, {
+        // Use the correct checkout API with POST method
+        await fetch(`http://localhost:8080/api/guest/check-out?bookingCode=${foundBooking.id}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
