@@ -20,7 +20,9 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
   const [roomNumber, setRoomNumber] = useState("");
   const [guestName, setGuestName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [monitorLoading, setMonitorLoading] = useState(false);
   const [foundBooking, setFoundBooking] = useState<any | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Mock bookings data
@@ -36,11 +38,39 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
     { id: "B006", guest: "Jessica Brown", room: "401", checkIn: "May 12, 2023, 3:30 PM", checkOut: "May 15, 2023, 10:00 AM", status: "checked-in" },
   ];
   
-  const handleSearch = () => {
+  const handleSearch = async () => {
     setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      if (bookingCode) {
+        // Check status by booking code
+        const response = await fetch(`http://localhost:8080/api/guest/status/${bookingCode}`);
+        
+        if (!response.ok) {
+          throw new Error("Failed to find booking");
+        }
+        
+        const data = await response.json();
+        setFoundBooking(data);
+      } else {
+        // Check by guest details
+        const params = new URLSearchParams();
+        if (roomNumber) params.append("roomNumber", roomNumber);
+        if (guestName) params.append("guestName", guestName);
+        
+        const response = await fetch(`http://localhost:8080/api/guest/check-in/by-details?${params}`);
+        
+        if (!response.ok) {
+          throw new Error("Failed to find booking");
+        }
+        
+        const data = await response.json();
+        setFoundBooking(data);
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      
+      // Fallback to mock data for demo
       const searchByCode = bookingCode.trim() !== "";
       const searchTerm = searchByCode ? bookingCode : guestName || roomNumber;
       
@@ -70,9 +100,28 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
         });
         setFoundBooking(null);
       }
-      
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
+  
+  const monitorBooking = async (code: string) => {
+    try {
+      setMonitorLoading(true);
+      const response = await fetch(`http://localhost:8080/api/guest/monitor/${code}`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to monitor booking");
+      }
+      
+      const data = await response.json();
+      setTimeRemaining(data.remainingTime || "02:30:00");
+    } catch (error) {
+      console.error("Error monitoring booking:", error);
+      setTimeRemaining("Error");
+    } finally {
+      setMonitorLoading(false);
+    }
   };
   
   const handleProcess = async () => {
@@ -81,18 +130,33 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
     setLoading(true);
     
     try {
-      // In a real app, we would call the API to check in/out the guest
-      // For now, we'll simulate success
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
       if (activeTab === "check-in") {
+        let response;
+        
+        if (bookingCode) {
+          // Check in by code
+          response = await fetch(`http://localhost:8080/api/guest/check-in/by-code?bookingCode=${bookingCode}`);
+        } else {
+          // Check in by details
+          const params = new URLSearchParams();
+          if (roomNumber) params.append("roomNumber", roomNumber);
+          if (guestName) params.append("guestName", guestName);
+          
+          response = await fetch(`http://localhost:8080/api/guest/check-in/by-details?${params}`);
+        }
+        
+        if (!response.ok) {
+          throw new Error("Check-in failed");
+        }
+        
+        // Start monitoring the booking time
+        if (bookingCode) {
+          await monitorBooking(bookingCode);
+        }
+        
         // Update room status to occupied
         if (foundBooking.room) {
-          // Find the room ID from the room number
-          const roomId = foundBooking.room; // This would normally come from an API lookup
-          
-          // Call API to update status
-          await fetch(`http://localhost:8080/api/rooms/${roomId}/status`, {
+          await fetch(`http://localhost:8080/api/rooms/${foundBooking.room}/status`, {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json"
@@ -106,13 +170,9 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
           description: `${foundBooking.guest} has been checked in to Room ${foundBooking.room}.`
         });
       } else {
-        // Update room status to cleaning
+        // Check out logic
         if (foundBooking.room) {
-          // Find the room ID from the room number
-          const roomId = foundBooking.room; // This would normally come from an API lookup
-          
-          // Call API to update status
-          await fetch(`http://localhost:8080/api/rooms/${roomId}/status`, {
+          await fetch(`http://localhost:8080/api/rooms/${foundBooking.room}/status`, {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json"
@@ -132,6 +192,7 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
       setRoomNumber("");
       setGuestName("");
       setFoundBooking(null);
+      setTimeRemaining(null);
       
       if (onComplete) {
         onComplete();
@@ -228,6 +289,7 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
                         <TableCell>
                           <Button variant="outline" size="sm" onClick={() => {
                             setFoundBooking(booking);
+                            setBookingCode(booking.id);
                           }}>
                             Check-in
                           </Button>
@@ -307,6 +369,7 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
                         <TableCell>
                           <Button variant="outline" size="sm" onClick={() => {
                             setFoundBooking(booking);
+                            setBookingCode(booking.id);
                           }}>
                             Check-out
                           </Button>
@@ -347,6 +410,26 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
               </div>
             </div>
             
+            {bookingCode && activeTab === "check-in" && (
+              <div className="pt-2 pb-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => monitorBooking(bookingCode)}
+                  disabled={monitorLoading}
+                  className="w-full"
+                >
+                  {monitorLoading ? "Checking..." : "Check Remaining Time"}
+                </Button>
+                
+                {timeRemaining && (
+                  <div className="mt-2 text-center">
+                    <p className="text-sm text-gray-500">Remaining Time</p>
+                    <p className="font-medium text-lg">{timeRemaining}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            
             <div className="pt-4 border-t flex justify-end">
               <Button onClick={handleProcess} disabled={loading} className="min-w-[150px]">
                 {loading ? 
@@ -361,3 +444,4 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
     </div>
   );
 };
+

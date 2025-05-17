@@ -12,6 +12,7 @@ import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { Room } from "@/utils/types";
+import { QRCodeDisplay } from "./QRCodeDisplay";
 
 interface BookingFormProps {
   selectedRoomId?: string;
@@ -26,17 +27,20 @@ export const BookingForm: React.FC<BookingFormProps> = ({
 }) => {
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
+  const [bookingSuccessful, setBookingSuccessful] = useState(false);
+  const [bookingCode, setBookingCode] = useState<string>("");
   const [formData, setFormData] = useState({
     roomId: selectedRoomId || "",
     guestName: "",
-    guestEmail: "",
-    guestPhone: "",
+    email: "",
+    phoneNumber: "",
     bookingType: "hourly",
     date: new Date(),
     startTime: "12:00",
-    duration: "1", // hours or days depending on bookingType
+    durationHours: "1", // hours or days depending on bookingType
+    paymentMethod: "cash",
+    status: "pending",
     totalAmount: 0,
-    payNow: true
   });
   const { toast } = useToast();
   
@@ -85,14 +89,14 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       (selectedRoom.baseHourlyRate || 25) : 
       (selectedRoom.baseDailyRate || 100);
     
-    const duration = parseInt(formData.duration);
+    const duration = parseInt(formData.durationHours);
     const total = rate * duration;
     
     setFormData(prev => ({
       ...prev,
       totalAmount: total
     }));
-  }, [formData.roomId, formData.bookingType, formData.duration, availableRooms]);
+  }, [formData.roomId, formData.bookingType, formData.durationHours, availableRooms]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -124,14 +128,39 @@ export const BookingForm: React.FC<BookingFormProps> = ({
     try {
       setLoading(true);
       
-      // In a real app, you would send this data to your API
-      // For now, we'll simulate a successful booking
+      // Prepare the booking data for API
+      const bookingData = {
+        roomId: formData.roomId,
+        guestName: formData.guestName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        bookingType: formData.bookingType,
+        date: format(formData.date, "yyyy-MM-dd"),
+        startTime: formData.startTime,
+        durationHours: parseInt(formData.durationHours),
+        paymentMethod: formData.paymentMethod,
+        status: formData.status
+      };
       
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      // Send booking data to API
+      const response = await fetch("http://localhost:8080/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(bookingData)
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to create booking");
+      }
+      
+      const result = await response.json();
+      setBookingCode(result.bookingCode || "BOOK123"); // Use the booking code from response or fallback
       
       // Update room status
       if (formData.roomId) {
-        const response = await fetch(`http://localhost:8080/api/rooms/${formData.roomId}/status`, {
+        const roomUpdateResponse = await fetch(`http://localhost:8080/api/rooms/${formData.roomId}/status`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json"
@@ -139,18 +168,16 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           body: JSON.stringify({ status: "RESERVED" })
         });
         
-        if (!response.ok) throw new Error("Failed to update room status");
+        if (!roomUpdateResponse.ok) throw new Error("Failed to update room status");
       }
       
       toast({
         title: "Booking Successful!",
-        description: `Your booking for ${format(formData.date, "PPP")} has been confirmed.`,
+        description: `Your booking for ${format(formData.date, "PPP")} has been confirmed. A confirmation code has been sent to your email.`,
       });
       
-      // Reset form or redirect
-      if (onComplete) {
-        onComplete();
-      }
+      setBookingSuccessful(true);
+      
     } catch (error) {
       console.error("Error creating booking:", error);
       toast({
@@ -163,11 +190,22 @@ export const BookingForm: React.FC<BookingFormProps> = ({
     }
   };
   
+  const handleCloseQR = () => {
+    setBookingSuccessful(false);
+    if (onComplete) {
+      onComplete();
+    }
+  };
+  
   const getSelectedRoom = () => {
     return availableRooms.find(room => room.id.toString() === formData.roomId);
   };
   
   const selectedRoom = getSelectedRoom();
+  
+  if (bookingSuccessful) {
+    return <QRCodeDisplay bookingId={bookingCode} onClose={handleCloseQR} />;
+  }
   
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -207,12 +245,12 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="guestEmail">Email</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="guestEmail"
-              name="guestEmail"
+              id="email"
+              name="email"
               type="email"
-              value={formData.guestEmail}
+              value={formData.email}
               onChange={handleInputChange}
               placeholder="Email address"
               disabled={loading}
@@ -221,11 +259,11 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="guestPhone">Phone Number</Label>
+            <Label htmlFor="phoneNumber">Phone Number</Label>
             <Input
-              id="guestPhone"
-              name="guestPhone"
-              value={formData.guestPhone}
+              id="phoneNumber"
+              name="phoneNumber"
+              value={formData.phoneNumber}
               onChange={handleInputChange}
               placeholder="Phone number"
               disabled={loading}
@@ -275,6 +313,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                   onSelect={handleDateChange}
                   initialFocus
                   disabled={(date) => date < new Date()}
+                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
@@ -297,13 +336,13 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="duration">Duration ({formData.bookingType === "hourly" ? "Hours" : "Days"})</Label>
+            <Label htmlFor="durationHours">Duration ({formData.bookingType === "hourly" ? "Hours" : "Days"})</Label>
             <Select
-              value={formData.duration}
-              onValueChange={(value) => handleSelectChange("duration", value)}
+              value={formData.durationHours}
+              onValueChange={(value) => handleSelectChange("durationHours", value)}
               disabled={loading}
             >
-              <SelectTrigger id="duration">
+              <SelectTrigger id="durationHours">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -331,16 +370,17 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           <div className="space-y-2">
             <Label>Payment Method</Label>
             <Select
-              value={formData.payNow ? "now" : "later"}
-              onValueChange={(value) => handleSelectChange("payNow", value === "now" ? "true" : "false")}
+              value={formData.paymentMethod}
+              onValueChange={(value) => handleSelectChange("paymentMethod", value)}
               disabled={loading}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="now">Pay Now</SelectItem>
-                <SelectItem value="later">Pay at Check-out</SelectItem>
+                <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="card">Card</SelectItem>
+                <SelectItem value="ecocash">EcoCash</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -365,9 +405,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           <div className="flex justify-between mb-2">
             <span className="text-sm text-gray-600">Duration:</span>
             <span className="font-medium">
-              {formData.duration} {formData.bookingType === "hourly" ? 
-                (parseInt(formData.duration) === 1 ? "hour" : "hours") : 
-                (parseInt(formData.duration) === 1 ? "day" : "days")
+              {formData.durationHours} {formData.bookingType === "hourly" ? 
+                (parseInt(formData.durationHours) === 1 ? "hour" : "hours") : 
+                (parseInt(formData.durationHours) === 1 ? "day" : "days")
               }
             </span>
           </div>
@@ -391,3 +431,4 @@ export const BookingForm: React.FC<BookingFormProps> = ({
     </form>
   );
 };
+

@@ -65,4 +65,35 @@ export interface Booking {
   paymentStatus: "paid" | "pending" | "partial";
   notes?: string;
   createdBy: string;
+  bookingCode?: string; // Added for booking code functionality
+}
+
+export interface BookingRequest {
+  roomId: string;
+  guestName: string;
+  email: string;
+  phoneNumber: string;
+  bookingType: string;
+  date: string;
+  startTime: string;
+  durationHours: number;
+  paymentMethod: string;
+  status: string;
+}
+
+export interface BookingResponse {
+  id: string;
+  bookingCode: string;
+  guestName: string;
+  room: string;
+  checkIn: string;
+  checkOut: string;
+  status: string;
+}
+
+export interface BookingTimeInfo {
+  bookingId: string;
+  remainingTime: string;
+  isOverdue: boolean;
+  originalEndTime: string;
 }
