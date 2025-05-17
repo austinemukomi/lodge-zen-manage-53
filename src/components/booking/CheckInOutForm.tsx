@@ -114,7 +114,7 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
       }
       
       const data = await response.json();
-      setTimeRemaining(data.remainingTime || "02:30:00");
+      setTimeRemaining(data.timeRemaining );
     } catch (error) {
       console.error("Error monitoring booking:", error);
       setTimeRemaining("Error");
@@ -179,7 +179,15 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
           description: `${foundBooking.guest} has been checked in to Room ${foundBooking.room}.`
         });
       } else {
-        // Check out logic
+        
+        await fetch(`http://localhost:8080/api/guest/check-out?bookingCode=${foundBooking.code}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          }
+        });
+      
+        // Update room status to CLEANING after check-out
         if (foundBooking.room) {
           await fetch(`http://localhost:8080/api/rooms/${foundBooking.room}/status`, {
             method: "PATCH",
@@ -189,7 +197,7 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
             body: JSON.stringify({ status: "CLEANING" })
           });
         }
-        
+      
         toast({
           title: "Check-out Successful",
           description: `${foundBooking.guest} has been checked out from Room ${foundBooking.room}.`
