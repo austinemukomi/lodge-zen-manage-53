@@ -186,12 +186,15 @@ export const CheckInOutForm: React.FC<CheckInOutFormProps> = ({ onComplete, full
       } else {
         
         // Use the correct checkout API with POST method
-        await fetch(`http://localhost:8080/api/guest/check-out?bookingCode=${foundBooking.id}`, {
+        console.log("Booking Code:", bookingCode);
+
+        await fetch(`http://localhost:8080/api/guest/check-out?bookingCode=${bookingCode}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
           }
         });
+        
       
         // Update room status to CLEANING after check-out
         if (foundBooking.room) {
