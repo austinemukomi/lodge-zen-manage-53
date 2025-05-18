@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Table, 
@@ -12,68 +12,102 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Search, Calendar, Clock, Filter } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+
+interface Room {
+  id: number;
+  roomNumber: string;
+  status: string;
+  floor: number;
+  specialFeatures: string;
+  lastCleanedAt: string;
+}
+
+interface Booking {
+  id: number;
+  room: Room;
+  guestName: string;
+  email: string;
+  phoneNumber: string;
+  type: string;
+  date: string;
+  startTime: string;
+  durationHours: number;
+  actualCheckIn: string | null;
+  actualCheckOut: string | null;
+  bookingCode: string;
+  status: string;
+  totalCharges: number;
+  scheduledCheckOut: string;
+  scheduledCheckIn: string;
+}
 
 export function BookingsTable() {
   const [activeTab, setActiveTab] = useState("active");
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  // Mock bookings data
-  const activeBookings = [
-    { 
-      id: "B001", 
-      guest: "John Smith", 
-      room: "102", 
-      checkIn: "Today 08:30 AM", 
-      checkOut: "Today 06:00 PM", 
-      duration: "Daily",
-      timeLeft: "03:45",
-      amount: "$90",
-      status: "checked-in"
-    },
-    { 
-      id: "B002", 
-      guest: "Emma Johnson", 
-      room: "205", 
-      checkIn: "Today 10:15 AM", 
-      checkOut: "Today 04:15 PM", 
-      duration: "Hourly",
-      timeLeft: "00:15",
-      amount: "$45",
-      status: "checked-in"
-    },
-    { 
-      id: "B003", 
-      guest: "Mike Davis", 
-      room: "310", 
-      checkIn: "Today 12:00 PM", 
-      checkOut: "Today 07:30 PM", 
-      duration: "Daily",
-      timeLeft: "01:30",
-      amount: "$120",
-      status: "checked-in"
-    },
-    { 
-      id: "B004", 
-      guest: "Sarah Williams", 
-      room: "401", 
-      checkIn: "Yesterday 08:00 PM", 
-      checkOut: "Today 10:00 AM", 
-      duration: "Overnight",
-      timeLeft: "-00:30",
-      amount: "$180",
-      status: "overdue"
-    },
-    { 
-      id: "B005", 
-      guest: "David Brown", 
-      room: "105", 
-      checkIn: "Tomorrow 10:00 AM", 
-      checkOut: "Tomorrow 06:00 PM", 
-      duration: "Daily",
-      timeLeft: "N/A",
-      amount: "$85",
-      status: "reserved"
-    },
-  ];
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:8080/api/bookings');
+        
+        if (!response.ok) {
+          throw new Error(`Error fetching bookings: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        setBookings(data);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch bookings';
+        setError(errorMessage);
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchBookings();
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  const calculateTimeLeft = (checkOutDate: string) => {
+    if (!checkOutDate) return "N/A";
+    
+    const now = new Date();
+    const checkOut = new Date(checkOutDate);
+    const diff = checkOut.getTime() - now.getTime();
+    
+    if (diff <= 0) return "-00:00";
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+
+  // Filter bookings by status
+  const activeBookings = bookings.filter(booking => 
+    booking.status === "CHECKED_IN" || booking.status === "OVERDUE" || booking.status === "RESERVED"
+  );
 
   return (
     <div className="space-y-6">
@@ -118,68 +152,76 @@ export function BookingsTable() {
           <CardTitle className="text-base font-medium">Active Bookings</CardTitle>
         </CardHeader>
         <CardContent className="p-4">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Booking ID</TableHead>
-                  <TableHead>Guest</TableHead>
-                  <TableHead>Room</TableHead>
-                  <TableHead>Check In</TableHead>
-                  <TableHead>Check Out</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Time Left</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activeBookings.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell className="font-medium">{booking.id}</TableCell>
-                    <TableCell>{booking.guest}</TableCell>
-                    <TableCell>{booking.room}</TableCell>
-                    <TableCell>{booking.checkIn}</TableCell>
-                    <TableCell>{booking.checkOut}</TableCell>
-                    <TableCell>{booking.duration}</TableCell>
-                    <TableCell>
-                      {booking.status === "checked-in" ? (
-                        <div className="flex items-center">
-                          <Clock className="h-3 w-3 mr-1 text-blue-500" />
-                          <span className={booking.timeLeft.startsWith("0") ? "text-red-500 font-medium" : ""}>
-                            {booking.timeLeft}
-                          </span>
-                        </div>
-                      ) : booking.status === "overdue" ? (
-                        <span className="text-red-500 font-medium">{booking.timeLeft}</span>
-                      ) : (
-                        <span>{booking.timeLeft}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{booking.amount}</TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium 
-                        ${booking.status === 'checked-in' ? 'bg-green-100 text-green-800' : 
-                        booking.status === 'overdue' ? 'bg-red-100 text-red-800' : 
-                        'bg-blue-100 text-blue-800'}`}>
-                        {booking.status === 'checked-in' ? 'Checked In' : 
-                         booking.status === 'overdue' ? 'Overdue' : 'Reserved'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-1">
-                        <Button variant="ghost" size="sm">View</Button>
-                        {booking.status === 'checked-in' && (
-                          <Button variant="ghost" size="sm">Check out</Button>
-                        )}
-                      </div>
-                    </TableCell>
+          {loading ? (
+            <div className="text-center py-8 text-gray-500">Loading bookings...</div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-500">Error: {error}</div>
+          ) : activeBookings.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">No active bookings found</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Booking ID</TableHead>
+                    <TableHead>Guest</TableHead>
+                    <TableHead>Room</TableHead>
+                    <TableHead>Check In</TableHead>
+                    <TableHead>Check Out</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead>Time Left</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {activeBookings.map((booking) => (
+                    <TableRow key={booking.id}>
+                      <TableCell className="font-medium">{booking.bookingCode}</TableCell>
+                      <TableCell>{booking.guestName}</TableCell>
+                      <TableCell>{booking.room.roomNumber}</TableCell>
+                      <TableCell>{formatDate(booking.scheduledCheckIn)}</TableCell>
+                      <TableCell>{formatDate(booking.scheduledCheckOut)}</TableCell>
+                      <TableCell>{booking.type}</TableCell>
+                      <TableCell>
+                        {booking.status === "CHECKED_IN" ? (
+                          <div className="flex items-center">
+                            <Clock className="h-3 w-3 mr-1 text-blue-500" />
+                            <span className={calculateTimeLeft(booking.scheduledCheckOut).startsWith("0") ? "text-red-500 font-medium" : ""}>
+                              {calculateTimeLeft(booking.scheduledCheckOut)}
+                            </span>
+                          </div>
+                        ) : booking.status === "OVERDUE" ? (
+                          <span className="text-red-500 font-medium">-{calculateTimeLeft(booking.scheduledCheckOut).substring(1)}</span>
+                        ) : (
+                          <span>N/A</span>
+                        )}
+                      </TableCell>
+                      <TableCell>${booking.totalCharges}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium 
+                          ${booking.status === 'CHECKED_IN' ? 'bg-green-100 text-green-800' : 
+                          booking.status === 'OVERDUE' ? 'bg-red-100 text-red-800' : 
+                          'bg-blue-100 text-blue-800'}`}>
+                          {booking.status === 'CHECKED_IN' ? 'Checked In' : 
+                           booking.status === 'OVERDUE' ? 'Overdue' : 'Reserved'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-1">
+                          <Button variant="ghost" size="sm">View</Button>
+                          {(booking.status === 'CHECKED_IN' || booking.status === 'OVERDUE') && (
+                            <Button variant="ghost" size="sm">Check out</Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

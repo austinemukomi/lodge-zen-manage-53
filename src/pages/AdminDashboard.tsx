@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,10 +29,106 @@ interface AdminDashboardProps {
   onLogout: () => void;
 }
 
+interface Room {
+  id: number;
+  roomNumber: string;
+  status: string;
+  floor: number;
+  specialFeatures: string;
+  lastCleanedAt: string;
+}
+
+interface Booking {
+  id: number;
+  room: Room;
+  guestName: string;
+  email: string;
+  phoneNumber: string;
+  type: string;
+  date: string;
+  startTime: string;
+  durationHours: number;
+  actualCheckIn: string | null;
+  actualCheckOut: string | null;
+  bookingCode: string;
+  status: string;
+  totalCharges: number;
+  scheduledCheckOut: string;
+  scheduledCheckIn: string;
+}
+
+interface UpcomingCheckout {
+  bookingCode: string;
+  guestName: string;
+  roomNumber: string;
+  remainingTime: string;
+}
+
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState("overview");
+  const [upcomingCheckouts, setUpcomingCheckouts] = useState<UpcomingCheckout[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:8080/api/bookings');
+        
+        if (!response.ok) {
+          throw new Error(`Error fetching bookings: ${response.statusText}`);
+        }
+        
+        const data: Booking[] = await response.json();
+        
+        // For upcoming checkouts (next 2 hours)
+        const checkedInBookings = data.filter(b => b.status === "CHECKED_IN");
+        
+        const upcomingCheckoutsList: UpcomingCheckout[] = checkedInBookings
+          .map(booking => {
+            const now = new Date();
+            const checkoutTime = new Date(booking.scheduledCheckOut);
+            const timeDiff = checkoutTime.getTime() - now.getTime();
+            const hoursRemaining = Math.floor(timeDiff / (1000 * 60 * 60));
+            const minutesRemaining = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            return {
+              bookingCode: booking.bookingCode,
+              guestName: booking.guestName,
+              roomNumber: booking.room.roomNumber,
+              remainingTime: `${hoursRemaining}hr ${minutesRemaining}min`,
+              remainingMs: timeDiff
+            };
+          })
+          .filter(checkout => checkout.remainingMs > 0 && checkout.remainingMs <= 2 * 60 * 60 * 1000)
+          .sort((a, b) => a.remainingMs - b.remainingMs)
+          .slice(0, 3)
+          .map(({ bookingCode, guestName, roomNumber, remainingTime }) => ({
+            bookingCode, guestName, roomNumber, remainingTime
+          }));
+          
+        setUpcomingCheckouts(upcomingCheckoutsList);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchBookings();
+    
+    // Refresh data every minute for time-sensitive information
+    const refreshInterval = setInterval(fetchBookings, 60000);
+    
+    return () => clearInterval(refreshInterval);
+  }, []);
+
   const handleLogout = () => {
     toast({
       title: "Logged Out",
@@ -103,29 +200,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     <CardDescription>Check-outs in the next 2 hours</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center bg-amber-50 p-2 rounded-md">
-                        <div>
-                          <p className="text-sm font-medium">Room 102 - John Smith</p>
-                          <p className="text-xs text-gray-500">Check out in 45 mins</p>
-                        </div>
-                        <Clock className="h-4 w-4 text-amber-500" />
+                    {loading ? (
+                      <div className="text-center py-4 text-gray-500">Loading checkouts...</div>
+                    ) : upcomingCheckouts.length > 0 ? (
+                      <div className="space-y-3">
+                        {upcomingCheckouts.map(checkout => (
+                          <div key={checkout.bookingCode} className="flex justify-between items-center bg-amber-50 p-2 rounded-md">
+                            <div>
+                              <p className="text-sm font-medium">Room {checkout.roomNumber} - {checkout.guestName}</p>
+                              <p className="text-xs text-gray-500">Check out in {checkout.remainingTime}</p>
+                            </div>
+                            <Clock className="h-4 w-4 text-amber-500" />
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex justify-between items-center bg-red-50 p-2 rounded-md">
-                        <div>
-                          <p className="text-sm font-medium">Room 205 - Emma Johnson</p>
-                          <p className="text-xs text-gray-500">Check out in 15 mins</p>
-                        </div>
-                        <Clock className="h-4 w-4 text-red-500" />
-                      </div>
-                      <div className="flex justify-between items-center bg-amber-50 p-2 rounded-md">
-                        <div>
-                          <p className="text-sm font-medium">Room 310 - Mike Davis</p>
-                          <p className="text-xs text-gray-500">Check out in 1hr 30m</p>
-                        </div>
-                        <Clock className="h-4 w-4 text-amber-500" />
-                      </div>
-                    </div>
+                    ) : (
+                      <div className="text-center py-4 text-gray-500">No upcoming checkouts in the next 2 hours</div>
+                    )}
                   </CardContent>
                 </Card>
                 

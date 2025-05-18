@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,92 +7,91 @@ import { Calendar, Clock, Filter, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 
+interface Room {
+  id: number;
+  roomNumber: string;
+  status: string;
+  floor: number;
+  specialFeatures: string;
+  lastCleanedAt: string;
+}
+
+interface Booking {
+  id: number;
+  room: Room;
+  guestName: string;
+  email: string;
+  phoneNumber: string;
+  type: string;
+  date: string;
+  startTime: string;
+  durationHours: number;
+  actualCheckIn: string | null;
+  actualCheckOut: string | null;
+  bookingCode: string;
+  status: string;
+  totalCharges: number;
+  scheduledCheckOut: string;
+  scheduledCheckIn: string;
+}
+
 export const AllBookingsTable: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Mock bookings data
-  const bookings = [
-    { 
-      id: "B001", 
-      guest: "John Smith", 
-      room: "102", 
-      checkIn: "May 15, 2023, 2:00 PM", 
-      checkOut: "May 18, 2023, 12:00 PM", 
-      status: "confirmed",
-      amount: "$350",
-      paymentStatus: "paid"
-    },
-    { 
-      id: "B002", 
-      guest: "Emma Johnson", 
-      room: "205", 
-      checkIn: "May 15, 2023, 3:00 PM", 
-      checkOut: "May 16, 2023, 11:00 AM", 
-      status: "confirmed",
-      amount: "$120",
-      paymentStatus: "pending"
-    },
-    { 
-      id: "B003", 
-      guest: "Michael Davis", 
-      room: "303", 
-      checkIn: "May 15, 2023, 4:30 PM", 
-      checkOut: "May 17, 2023, 10:00 AM", 
-      status: "confirmed",
-      amount: "$240",
-      paymentStatus: "paid"
-    },
-    { 
-      id: "B004", 
-      guest: "Sarah Wilson", 
-      room: "105", 
-      checkIn: "May 13, 2023, 2:00 PM", 
-      checkOut: "May 15, 2023, 12:00 PM", 
-      status: "checked-in",
-      amount: "$200",
-      paymentStatus: "paid"
-    },
-    { 
-      id: "B005", 
-      guest: "Thomas Lee", 
-      room: "210", 
-      checkIn: "May 14, 2023, 1:00 PM", 
-      checkOut: "May 15, 2023, 11:00 AM", 
-      status: "checked-in",
-      amount: "$100",
-      paymentStatus: "paid"
-    },
-    { 
-      id: "B006", 
-      guest: "Jessica Brown", 
-      room: "401", 
-      checkIn: "May 12, 2023, 3:30 PM", 
-      checkOut: "May 15, 2023, 10:00 AM", 
-      status: "completed",
-      amount: "$280",
-      paymentStatus: "paid"
-    },
-    { 
-      id: "B007", 
-      guest: "David Miller", 
-      room: "203", 
-      checkIn: "May 10, 2023, 12:00 PM", 
-      checkOut: "May 12, 2023, 10:00 AM", 
-      status: "completed",
-      amount: "$220",
-      paymentStatus: "paid"
-    },
-  ];
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:8080/api/bookings');
+        
+        if (!response.ok) {
+          throw new Error(`Error fetching bookings: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        setBookings(data);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch bookings';
+        setError(errorMessage);
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchBookings();
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
+    
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
 
   // Filter bookings based on status and search term
   const filteredBookings = bookings.filter(booking => {
-    const matchesStatus = statusFilter === "all" || booking.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || booking.status.toLowerCase() === statusFilter.toLowerCase();
     const matchesSearch = searchTerm === "" || 
-      booking.guest.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.room.includes(searchTerm) ||
-      booking.id.includes(searchTerm);
+      booking.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      booking.room.roomNumber.includes(searchTerm) ||
+      booking.bookingCode.includes(searchTerm);
     
     return matchesStatus && matchesSearch;
   });
@@ -103,6 +102,17 @@ export const AllBookingsTable: React.FC = () => {
       title: "Booking Updated",
       description: `Booking ${bookingId} status updated to ${newStatus}.`
     });
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch(status.toUpperCase()) {
+      case 'CHECKED_IN': return 'Checked In';
+      case 'OVERDUE': return 'Overdue';
+      case 'RESERVED': return 'Reserved';
+      case 'COMPLETED': return 'Completed';
+      case 'CANCELLED': return 'Cancelled';
+      default: return status;
+    }
   };
   
   return (
@@ -132,105 +142,105 @@ export const AllBookingsTable: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
-              <SelectItem value="confirmed">Confirmed</SelectItem>
-              <SelectItem value="checked-in">Checked In</SelectItem>
+              <SelectItem value="reserved">Reserved</SelectItem>
+              <SelectItem value="checked_in">Checked In</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="overdue">Overdue</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
       
-      <div className="rounded-md border overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Guest</TableHead>
-              <TableHead>Room</TableHead>
-              <TableHead>Check-in</TableHead>
-              <TableHead>Check-out</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredBookings.length > 0 ? (
-              filteredBookings.map(booking => (
-                <TableRow key={booking.id}>
-                  <TableCell className="font-medium">{booking.id}</TableCell>
-                  <TableCell>{booking.guest}</TableCell>
-                  <TableCell>{booking.room}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <Calendar className="h-3 w-3 mr-1 text-gray-400" />
-                      <span>{booking.checkIn}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <Clock className="h-3 w-3 mr-1 text-gray-400" />
-                      <span>{booking.checkOut}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <span>{booking.amount}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded ${
-                        booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {booking.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
+      {loading ? (
+        <div className="text-center py-8 text-gray-500">Loading bookings...</div>
+      ) : error ? (
+        <div className="text-center py-8 text-red-500">Error: {error}</div>
+      ) : (
+        <div className="rounded-md border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Guest</TableHead>
+                <TableHead>Room</TableHead>
+                <TableHead>Check-in</TableHead>
+                <TableHead>Check-out</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredBookings.length > 0 ? (
+                filteredBookings.map(booking => (
+                  <TableRow key={booking.id}>
+                    <TableCell className="font-medium">{booking.bookingCode}</TableCell>
+                    <TableCell>{booking.guestName}</TableCell>
+                    <TableCell>{booking.room.roomNumber}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <Calendar className="h-3 w-3 mr-1 text-gray-400" />
+                        <span>{formatDate(booking.scheduledCheckIn)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <Clock className="h-3 w-3 mr-1 text-gray-400" />
+                        <span>{formatDate(booking.scheduledCheckOut)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <span>${booking.totalCharges}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium 
+                        ${booking.status === 'RESERVED' ? 'bg-blue-100 text-blue-800' : 
+                        booking.status === 'CHECKED_IN' ? 'bg-green-100 text-green-800' : 
+                        booking.status === 'COMPLETED' ? 'bg-gray-100 text-gray-800' :
+                        booking.status === 'OVERDUE' ? 'bg-red-100 text-red-800' :
+                        'bg-red-100 text-red-800'}`}>
+                        {getStatusLabel(booking.status)}
                       </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium 
-                      ${booking.status === 'confirmed' ? 'bg-blue-100 text-blue-800' : 
-                      booking.status === 'checked-in' ? 'bg-green-100 text-green-800' : 
-                      booking.status === 'completed' ? 'bg-gray-100 text-gray-800' :
-                      'bg-red-100 text-red-800'}`}>
-                      {booking.status === 'confirmed' ? 'Confirmed' : 
-                       booking.status === 'checked-in' ? 'Checked In' : 
-                       booking.status === 'completed' ? 'Completed' : 'Cancelled'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm">View</Button>
-                      {booking.status === 'confirmed' && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleStatusChange(booking.id, 'checked-in')}
-                        >
-                          Check-in
-                        </Button>
-                      )}
-                      {booking.status === 'checked-in' && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleStatusChange(booking.id, 'completed')}
-                        >
-                          Check-out
-                        </Button>
-                      )}
-                    </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm">View</Button>
+                        {booking.status === 'RESERVED' && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleStatusChange(booking.bookingCode, 'checked-in')}
+                          >
+                            Check-in
+                          </Button>
+                        )}
+                        {booking.status === 'CHECKED_IN' && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleStatusChange(booking.bookingCode, 'completed')}
+                          >
+                            Check-out
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                    No bookings matching your filters
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                  No bookings matching your filters
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
       
       <div className="flex justify-between items-center">
         <div className="text-sm text-gray-500">

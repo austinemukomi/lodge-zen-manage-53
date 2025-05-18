@@ -1,7 +1,10 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { AllBookingsTable } from "@/components/booking/AllBookingsTable";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
 
 interface BookingsProps {
   onLogout: () => void;
@@ -21,10 +24,14 @@ const Bookings: React.FC<BookingsProps> = ({ onLogout }) => {
             <p className="text-gray-600">Manage all bookings</p>
           </div>
           
-          {/* Bookings content goes here */}
-          <div className="text-center text-gray-500 mt-12">
-            <p>No bookings available at the moment.</p>
-          </div>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle>All Bookings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <AllBookingsTable />
+            </CardContent>
+          </Card>
         </main>
       </div>
     </div>
