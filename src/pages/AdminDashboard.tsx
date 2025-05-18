@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -75,6 +74,7 @@ interface DailySummary {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState("overview");
   const [upcomingCheckouts, setUpcomingCheckouts] = useState<UpcomingCheckout[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [dailySummary, setDailySummary] = useState<DailySummary>({
     checkIns: 0,
     checkOuts: 0,
@@ -86,19 +86,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const { toast } = useToast();
   
   useEffect(() => {
-    const fetchBookings = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:8080/api/bookings');
         
-        if (!response.ok) {
-          throw new Error(`Error fetching bookings: ${response.statusText}`);
+        // Fetch rooms data
+        const roomsResponse = await fetch('http://localhost:8080/api/rooms');
+        if (!roomsResponse.ok) {
+          throw new Error(`Error fetching rooms: ${roomsResponse.statusText}`);
         }
+        const roomsData = await roomsResponse.json();
+        setRooms(roomsData);
         
-        const data: Booking[] = await response.json();
+        // Fetch bookings data
+        const bookingsResponse = await fetch('http://localhost:8080/api/bookings');
+        if (!bookingsResponse.ok) {
+          throw new Error(`Error fetching bookings: ${bookingsResponse.statusText}`);
+        }
+        const bookingsData: Booking[] = await bookingsResponse.json();
         
         // For upcoming checkouts (next 2 hours)
-        const checkedInBookings = data.filter(b => b.status === "CHECKED_IN");
+        const checkedInBookings = bookingsData.filter(b => b.status === "CHECKED_IN");
         
         const upcomingCheckoutsList: UpcomingCheckout[] = checkedInBookings
           .map(booking => {
@@ -130,20 +138,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
         today.setHours(0, 0, 0, 0);
         
         // Today's check-ins and check-outs
-        const todayCheckIns = data.filter(booking => {
+        const todayCheckIns = bookingsData.filter(booking => {
           const checkInDate = new Date(booking.scheduledCheckIn);
           checkInDate.setHours(0, 0, 0, 0);
           return checkInDate.getTime() === today.getTime();
         }).length;
         
-        const todayCheckOuts = data.filter(booking => {
+        const todayCheckOuts = bookingsData.filter(booking => {
           const checkOutDate = new Date(booking.scheduledCheckOut);
           checkOutDate.setHours(0, 0, 0, 0);
           return checkOutDate.getTime() === today.getTime();
         }).length;
         
         // Today's revenue
-        const todayRevenue = data
+        const todayRevenue = bookingsData
           .filter(booking => {
             const bookingDate = new Date(booking.scheduledCheckIn);
             bookingDate.setHours(0, 0, 0, 0);
@@ -152,13 +160,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           .reduce((sum, booking) => sum + booking.totalCharges, 0);
         
         // Occupancy rate
-        const totalRooms = 45; // Assuming this number from the default value in AdminOverviewStats
-        const occupiedRooms = data.filter(booking => booking.status === "CHECKED_IN").length;
+        const totalRooms = roomsData.length; // Get real total rooms count
+        const occupiedRooms = bookingsData.filter(booking => booking.status === "CHECKED_IN").length;
         const occupancyRate = Math.round((occupiedRooms / totalRooms) * 100);
         
         // Count bookings with potential pending payments (placeholder logic)
-        // For this example, we'll consider "RESERVED" status as potentially having pending payments
-        const pendingPayments = data.filter(booking => booking.status === "RESERVED").length;
+        const pendingPayments = bookingsData.filter(booking => booking.status === "RESERVED").length;
         
         setDailySummary({
           checkIns: todayCheckIns,
@@ -179,13 +186,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       }
     };
     
-    fetchBookings();
+    fetchData();
     
     // Refresh data every minute for time-sensitive information
-    const refreshInterval = setInterval(fetchBookings, 60000);
+    const refreshInterval = setInterval(fetchData, 60000);
     
     return () => clearInterval(refreshInterval);
-  }, []);
+  }, [toast]);
 
   const handleLogout = () => {
     toast({

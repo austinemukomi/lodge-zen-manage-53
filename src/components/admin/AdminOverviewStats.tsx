@@ -42,6 +42,7 @@ interface Employee {
 }
 
 export function AdminOverviewStats() {
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +50,7 @@ export function AdminOverviewStats() {
   const { toast } = useToast();
   
   const [stats, setStats] = useState({
-    totalRooms: 45, // Default value until we have proper rooms data
+    totalRooms: 0,
     availableRooms: 0,
     occupiedRooms: 0,
     todayRevenue: 0,
@@ -67,26 +68,32 @@ export function AdminOverviewStats() {
       try {
         setLoading(true);
         
+        // Fetch rooms data
+        const roomsResponse = await fetch('http://localhost:8080/api/rooms');
+        if (!roomsResponse.ok) {
+          throw new Error(`Error fetching rooms: ${roomsResponse.statusText}`);
+        }
+        const roomsData = await roomsResponse.json();
+        setRooms(roomsData);
+        
         // Fetch bookings data
         const bookingsResponse = await fetch('http://localhost:8080/api/bookings');
-        
         if (!bookingsResponse.ok) {
           throw new Error(`Error fetching bookings: ${bookingsResponse.statusText}`);
         }
-        
         const bookingsData = await bookingsResponse.json();
         setBookings(bookingsData);
         
         // Fetch employees data
-        const employeesResponse = await fetch('http://localhost:8080/api/employees');
-        
-        if (employeesResponse.ok) {
-          const employeesData = await employeesResponse.json();
-          setEmployees(employeesData);
+        const employeesResponse = await fetch('http://localhost:8080/api/admin/users');
+        if (!employeesResponse.ok) {
+          throw new Error(`Error fetching employees: ${employeesResponse.statusText}`);
         }
+        const employeesData = await employeesResponse.json();
+        setEmployees(employeesData);
         
-        // Calculate stats using the booking data and employee data
-        calculateStats(bookingsData, employeesResponse.ok ? await employeesResponse.json() : []);
+        // Calculate stats using the fetched data
+        calculateStats(roomsData, bookingsData, employeesData);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data';
         setError(errorMessage);
@@ -103,13 +110,17 @@ export function AdminOverviewStats() {
     fetchData();
   }, [toast]);
 
-  const calculateStats = (bookingData: Booking[], employeeData: Employee[]) => {
+  const calculateStats = (roomData: Room[], bookingData: Booking[], employeeData: Employee[]) => {
     // Get today's date at midnight for comparison
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
+    // Total rooms count from actual room data
+    const totalRooms = roomData.length;
+    
     // Calculate number of rooms occupied (based on CHECKED_IN status)
     const occupiedRooms = bookingData.filter(booking => booking.status === "CHECKED_IN").length;
+    const availableRooms = totalRooms - occupiedRooms;
     
     // Today's revenue (bookings with check-in date today)
     const todayBookings = bookingData.filter(booking => {
@@ -145,14 +156,14 @@ export function AdminOverviewStats() {
       ? todayRevenue > 0 ? 100 : 0 
       : Math.round(((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100);
     
-    // Staff calculations
+    // Staff calculations from employee data
     const totalStaff = employeeData.length;
     const onDutyStaff = employeeData.filter(employee => employee.status === "ON_DUTY").length;
     const offDutyStaff = totalStaff - onDutyStaff;
     
     setStats({
-      ...stats,
-      availableRooms: stats.totalRooms - occupiedRooms,
+      totalRooms,
+      availableRooms,
       occupiedRooms,
       todayRevenue,
       revenueChange,
@@ -161,7 +172,7 @@ export function AdminOverviewStats() {
       checkOuts: todayCheckOuts,
       totalStaff,
       onDutyStaff,
-      offDutyStaff: offDutyStaff
+      offDutyStaff
     });
   };
 
