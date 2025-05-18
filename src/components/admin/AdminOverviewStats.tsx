@@ -32,14 +32,24 @@ interface Booking {
   scheduledCheckIn: string;
 }
 
+interface Employee {
+  id: number;
+  name: string;
+  role: string;
+  status: string;
+  department: string;
+  email: string;
+}
+
 export function AdminOverviewStats() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
   const [stats, setStats] = useState({
-    totalRooms: 45,
+    totalRooms: 45, // Default value until we have proper rooms data
     availableRooms: 0,
     occupiedRooms: 0,
     todayRevenue: 0,
@@ -47,28 +57,38 @@ export function AdminOverviewStats() {
     totalBookings: 0,
     checkIns: 0,
     checkOuts: 0,
-    totalStaff: 12,
-    onDutyStaff: 8,
-    offDutyStaff: 4
+    totalStaff: 0,
+    onDutyStaff: 0,
+    offDutyStaff: 0
   });
 
   useEffect(() => {
-    const fetchBookings = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:8080/api/bookings');
         
-        if (!response.ok) {
-          throw new Error(`Error fetching bookings: ${response.statusText}`);
+        // Fetch bookings data
+        const bookingsResponse = await fetch('http://localhost:8080/api/bookings');
+        
+        if (!bookingsResponse.ok) {
+          throw new Error(`Error fetching bookings: ${bookingsResponse.statusText}`);
         }
         
-        const data = await response.json();
-        setBookings(data);
+        const bookingsData = await bookingsResponse.json();
+        setBookings(bookingsData);
         
-        // Calculate stats from the booking data
-        calculateStats(data);
+        // Fetch employees data
+        const employeesResponse = await fetch('http://localhost:8080/api/employees');
+        
+        if (employeesResponse.ok) {
+          const employeesData = await employeesResponse.json();
+          setEmployees(employeesData);
+        }
+        
+        // Calculate stats using the booking data and employee data
+        calculateStats(bookingsData, employeesResponse.ok ? await employeesResponse.json() : []);
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch bookings';
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data';
         setError(errorMessage);
         toast({
           title: "Error",
@@ -80,10 +100,10 @@ export function AdminOverviewStats() {
       }
     };
     
-    fetchBookings();
+    fetchData();
   }, [toast]);
 
-  const calculateStats = (bookingData: Booking[]) => {
+  const calculateStats = (bookingData: Booking[], employeeData: Employee[]) => {
     // Get today's date at midnight for comparison
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -108,8 +128,27 @@ export function AdminOverviewStats() {
       return checkOutDate.getTime() === today.getTime();
     }).length;
 
-    // Calculate revenue change (fictional for demo)
-    const revenueChange = Math.round(Math.random() * 20);
+    // Calculate revenue change (using available data - this is an estimate)
+    const yesterdayDate = new Date(today);
+    yesterdayDate.setDate(today.getDate() - 1);
+    
+    const yesterdayBookings = bookingData.filter(booking => {
+      const bookingDate = new Date(booking.scheduledCheckIn);
+      bookingDate.setHours(0, 0, 0, 0);
+      return bookingDate.getTime() === yesterdayDate.getTime();
+    });
+    
+    const yesterdayRevenue = yesterdayBookings.reduce((sum, booking) => sum + booking.totalCharges, 0);
+    
+    // Calculate percentage change, handle division by zero
+    const revenueChange = yesterdayRevenue === 0 
+      ? todayRevenue > 0 ? 100 : 0 
+      : Math.round(((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100);
+    
+    // Staff calculations
+    const totalStaff = employeeData.length;
+    const onDutyStaff = employeeData.filter(employee => employee.status === "ON_DUTY").length;
+    const offDutyStaff = totalStaff - onDutyStaff;
     
     setStats({
       ...stats,
@@ -119,7 +158,10 @@ export function AdminOverviewStats() {
       revenueChange,
       totalBookings: bookingData.length,
       checkIns: todayCheckIns,
-      checkOuts: todayCheckOuts
+      checkOuts: todayCheckOuts,
+      totalStaff,
+      onDutyStaff,
+      offDutyStaff: offDutyStaff
     });
   };
 
@@ -148,7 +190,10 @@ export function AdminOverviewStats() {
             <div>
               <p className="text-sm font-medium text-gray-500">Today's Revenue</p>
               <p className="text-2xl font-bold">${stats.todayRevenue.toFixed(2)}</p>
-              <p className="text-xs text-gray-500 mt-1">↑{stats.revenueChange}% from yesterday</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {stats.revenueChange >= 0 ? '↑' : '↓'}
+                {Math.abs(stats.revenueChange)}% from yesterday
+              </p>
             </div>
             <div className="h-12 w-12 bg-green-500/10 rounded-full flex items-center justify-center">
               <CreditCard className="h-6 w-6 text-green-500" />

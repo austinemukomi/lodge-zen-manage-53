@@ -64,9 +64,24 @@ interface UpcomingCheckout {
   remainingTime: string;
 }
 
+interface DailySummary {
+  checkIns: number;
+  checkOuts: number;
+  revenue: number;
+  occupancyRate: number;
+  pendingPayments: number;
+}
+
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState("overview");
   const [upcomingCheckouts, setUpcomingCheckouts] = useState<UpcomingCheckout[]>([]);
+  const [dailySummary, setDailySummary] = useState<DailySummary>({
+    checkIns: 0,
+    checkOuts: 0,
+    revenue: 0,
+    occupancyRate: 0,
+    pendingPayments: 0
+  });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
@@ -109,6 +124,49 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
           }));
           
         setUpcomingCheckouts(upcomingCheckoutsList);
+        
+        // Calculate today's summary
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Today's check-ins and check-outs
+        const todayCheckIns = data.filter(booking => {
+          const checkInDate = new Date(booking.scheduledCheckIn);
+          checkInDate.setHours(0, 0, 0, 0);
+          return checkInDate.getTime() === today.getTime();
+        }).length;
+        
+        const todayCheckOuts = data.filter(booking => {
+          const checkOutDate = new Date(booking.scheduledCheckOut);
+          checkOutDate.setHours(0, 0, 0, 0);
+          return checkOutDate.getTime() === today.getTime();
+        }).length;
+        
+        // Today's revenue
+        const todayRevenue = data
+          .filter(booking => {
+            const bookingDate = new Date(booking.scheduledCheckIn);
+            bookingDate.setHours(0, 0, 0, 0);
+            return bookingDate.getTime() === today.getTime();
+          })
+          .reduce((sum, booking) => sum + booking.totalCharges, 0);
+        
+        // Occupancy rate
+        const totalRooms = 45; // Assuming this number from the default value in AdminOverviewStats
+        const occupiedRooms = data.filter(booking => booking.status === "CHECKED_IN").length;
+        const occupancyRate = Math.round((occupiedRooms / totalRooms) * 100);
+        
+        // Count bookings with potential pending payments (placeholder logic)
+        // For this example, we'll consider "RESERVED" status as potentially having pending payments
+        const pendingPayments = data.filter(booking => booking.status === "RESERVED").length;
+        
+        setDailySummary({
+          checkIns: todayCheckIns,
+          checkOuts: todayCheckOuts,
+          revenue: todayRevenue,
+          occupancyRate,
+          pendingPayments
+        });
       } catch (err) {
         console.error("Error fetching data:", err);
         toast({
@@ -228,23 +286,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <CardContent className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm">Check-ins:</span>
-                      <span className="font-medium">12</span>
+                      <span className="font-medium">{dailySummary.checkIns}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm">Check-outs:</span>
-                      <span className="font-medium">8</span>
+                      <span className="font-medium">{dailySummary.checkOuts}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm">Revenue:</span>
-                      <span className="font-medium text-green-600">$2,450</span>
+                      <span className="font-medium text-green-600">${dailySummary.revenue.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm">Occupancy Rate:</span>
-                      <span className="font-medium">78%</span>
+                      <span className="font-medium">{dailySummary.occupancyRate}%</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm">Pending Payments:</span>
-                      <span className="font-medium text-amber-600">3</span>
+                      <span className="font-medium text-amber-600">{dailySummary.pendingPayments}</span>
                     </div>
                   </CardContent>
                 </Card>
