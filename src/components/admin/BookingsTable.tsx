@@ -108,6 +108,17 @@ export function BookingsTable() {
   const activeBookings = bookings.filter(booking => 
     booking.status === "CHECKED_IN" || booking.status === "OVERDUE" || booking.status === "RESERVED"
   );
+  
+  const upcomingBookings = bookings.filter(booking => 
+    booking.status === "RESERVED" && new Date(booking.scheduledCheckIn) > new Date()
+  );
+  
+  const pastBookings = bookings.filter(booking => 
+    booking.status === "COMPLETED" || booking.status === "CANCELLED"
+  );
+
+  const displayBookings = activeTab === "active" ? activeBookings : 
+                          activeTab === "upcoming" ? upcomingBookings : pastBookings;
 
   return (
     <div className="space-y-6">
@@ -124,7 +135,7 @@ export function BookingsTable() {
       </div>
       
       <div className="flex flex-col md:flex-row justify-between gap-4 mb-4">
-        <Tabs defaultValue="active" className="w-full md:w-auto">
+        <Tabs defaultValue="active" value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
           <TabsList>
             <TabsTrigger value="active">Active</TabsTrigger>
             <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
@@ -149,15 +160,21 @@ export function BookingsTable() {
       
       <Card>
         <CardHeader className="p-4 pb-0">
-          <CardTitle className="text-base font-medium">Active Bookings</CardTitle>
+          <CardTitle className="text-base font-medium">
+            {activeTab === "active" ? "Active Bookings" : 
+             activeTab === "upcoming" ? "Upcoming Bookings" : "Booking History"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-4">
           {loading ? (
             <div className="text-center py-8 text-gray-500">Loading bookings...</div>
           ) : error ? (
             <div className="text-center py-8 text-red-500">Error: {error}</div>
-          ) : activeBookings.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No active bookings found</div>
+          ) : displayBookings.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No {activeTab === "active" ? "active" : 
+                 activeTab === "upcoming" ? "upcoming" : "past"} bookings found
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -169,14 +186,14 @@ export function BookingsTable() {
                     <TableHead>Check In</TableHead>
                     <TableHead>Check Out</TableHead>
                     <TableHead>Duration</TableHead>
-                    <TableHead>Time Left</TableHead>
+                    {activeTab === "active" && <TableHead>Time Left</TableHead>}
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {activeBookings.map((booking) => (
+                  {displayBookings.map((booking) => (
                     <TableRow key={booking.id}>
                       <TableCell className="font-medium">{booking.bookingCode}</TableCell>
                       <TableCell>{booking.guestName}</TableCell>
@@ -184,28 +201,34 @@ export function BookingsTable() {
                       <TableCell>{formatDate(booking.scheduledCheckIn)}</TableCell>
                       <TableCell>{formatDate(booking.scheduledCheckOut)}</TableCell>
                       <TableCell>{booking.type}</TableCell>
-                      <TableCell>
-                        {booking.status === "CHECKED_IN" ? (
-                          <div className="flex items-center">
-                            <Clock className="h-3 w-3 mr-1 text-blue-500" />
-                            <span className={calculateTimeLeft(booking.scheduledCheckOut).startsWith("0") ? "text-red-500 font-medium" : ""}>
-                              {calculateTimeLeft(booking.scheduledCheckOut)}
-                            </span>
-                          </div>
-                        ) : booking.status === "OVERDUE" ? (
-                          <span className="text-red-500 font-medium">-{calculateTimeLeft(booking.scheduledCheckOut).substring(1)}</span>
-                        ) : (
-                          <span>N/A</span>
-                        )}
-                      </TableCell>
+                      {activeTab === "active" && (
+                        <TableCell>
+                          {booking.status === "CHECKED_IN" ? (
+                            <div className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1 text-blue-500" />
+                              <span className={calculateTimeLeft(booking.scheduledCheckOut).startsWith("0") ? "text-red-500 font-medium" : ""}>
+                                {calculateTimeLeft(booking.scheduledCheckOut)}
+                              </span>
+                            </div>
+                          ) : booking.status === "OVERDUE" ? (
+                            <span className="text-red-500 font-medium">-{calculateTimeLeft(booking.scheduledCheckOut).substring(1)}</span>
+                          ) : (
+                            <span>N/A</span>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>${booking.totalCharges}</TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium 
                           ${booking.status === 'CHECKED_IN' ? 'bg-green-100 text-green-800' : 
                           booking.status === 'OVERDUE' ? 'bg-red-100 text-red-800' : 
-                          'bg-blue-100 text-blue-800'}`}>
+                          booking.status === 'RESERVED' ? 'bg-blue-100 text-blue-800' :
+                          booking.status === 'COMPLETED' ? 'bg-gray-100 text-gray-800' :
+                          'bg-red-100 text-red-800'}`}>
                           {booking.status === 'CHECKED_IN' ? 'Checked In' : 
-                           booking.status === 'OVERDUE' ? 'Overdue' : 'Reserved'}
+                           booking.status === 'OVERDUE' ? 'Overdue' :
+                           booking.status === 'RESERVED' ? 'Reserved' :
+                           booking.status === 'COMPLETED' ? 'Completed' : 'Cancelled'}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -213,6 +236,9 @@ export function BookingsTable() {
                           <Button variant="ghost" size="sm">View</Button>
                           {(booking.status === 'CHECKED_IN' || booking.status === 'OVERDUE') && (
                             <Button variant="ghost" size="sm">Check out</Button>
+                          )}
+                          {booking.status === 'RESERVED' && (
+                            <Button variant="ghost" size="sm">Check in</Button>
                           )}
                         </div>
                       </TableCell>
