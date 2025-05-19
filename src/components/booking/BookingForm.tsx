@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { format, addMinutes, isBefore } from "date-fns";
+import { Calendar as CalendarIcon, Clock, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { Room } from "@/utils/types";
-import { PaymentSummary } from "./PaymentSummary";
+import { QRCodeDisplay } from "./QRCodeDisplay";
 
 interface BookingFormProps {
   selectedRoomId?: string;
@@ -19,92 +19,131 @@ interface BookingFormProps {
   onComplete?: () => void;
 }
 
-export const BookingForm = ({ selectedRoomId, isReceptionist = false, onComplete }: BookingFormProps) => {
+export const BookingForm: React.FC<BookingFormProps> = ({ 
+  selectedRoomId, 
+  isReceptionist = false,
+  onComplete 
+}) => {
+  const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [bookingSuccessful, setBookingSuccessful] = useState(false);
+  const [bookingCode, setBookingCode] = useState<string>("");
   const [formData, setFormData] = useState({
     roomId: selectedRoomId || "",
     guestName: "",
     email: "",
     phoneNumber: "",
-    bookingType: "daily",
+    bookingType: "hourly",
     date: new Date(),
     startTime: "12:00",
-    durationHours: 3,
-    specialRequests: ""
+    durationHours: "1", // hours or days depending on bookingType
+    paymentMethod: "cash",
+    status: "pending",
+    totalAmount: 0,
   });
-  
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [fetchingRooms, setFetchingRooms] = useState(true);
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
-  const [totalAmount, setTotalAmount] = useState(0);
-  const [bookingId, setBookingId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   
   // Fetch available rooms
   useEffect(() => {
-    const fetchRooms = async () => {
+    const fetchAvailableRooms = async () => {
       try {
-        setFetchingRooms(true);
-        const response = await fetch('http://localhost:8080/api/rooms?status=AVAILABLE');
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `Error fetching rooms: ${response.statusText}`);
-        }
+        setLoading(true);
+        const response = await fetch("http://localhost:8080/api/rooms");
+        if (!response.ok) throw new Error("Failed to fetch rooms");
         
         const data = await response.json();
-        setRooms(data);
+        const availableRooms = data.filter((room: any) => room.status === "AVAILABLE");
+        setAvailableRooms(availableRooms);
         
-        // If selectedRoomId is provided and exists in fetched rooms, use it
-        if (selectedRoomId) {
-          const selectedRoom = data.find((room: Room) => room.id === selectedRoomId);
-          if (selectedRoom) {
-            setFormData(prev => ({
-              ...prev,
-              roomId: selectedRoomId
-            }));
-          }
+        // Set the first available room if none is selected
+        if (!selectedRoomId && availableRooms.length > 0) {
+          setFormData(prev => ({
+            ...prev,
+            roomId: availableRooms[0].id.toString()
+          }));
         }
-        
       } catch (error) {
-        console.error("Error fetching rooms:", error);
+        console.error("Error fetching available rooms:", error);
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to load available rooms",
+          description: "Failed to load available rooms",
           variant: "destructive"
         });
       } finally {
-        setFetchingRooms(false);
+        setLoading(false);
       }
     };
     
-    fetchRooms();
+    fetchAvailableRooms();
   }, [selectedRoomId]);
   
-  // Handle form input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  // Calculate total amount when relevant fields change
+  useEffect(() => {
+    if (!formData.roomId) return;
+    
+    const selectedRoom = availableRooms.find(room => room.id.toString() === formData.roomId);
+    if (!selectedRoom) return;
+    
+    const rate = formData.bookingType === "hourly" ? 
+      (selectedRoom.baseHourlyRate || 25) : 
+      (selectedRoom.baseDailyRate || 100);
+    
+    const duration = parseInt(formData.durationHours);
+    const total = rate * duration;
+    
+    setFormData(prev => ({
+      ...prev,
+      totalAmount: total
+    }));
+  }, [formData.roomId, formData.bookingType, formData.durationHours, availableRooms]);
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: value
-    });
+    }));
   };
   
-  // Handle date change from calendar
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
   const handleDateChange = (date: Date | undefined) => {
     if (date) {
-      setFormData({
-        ...formData,
-        date: date
-      });
+      setFormData(prev => ({
+        ...prev,
+        date
+      }));
     }
   };
   
-  // Handle form submission
-  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
+      // Check if hourly booking meets the time restriction (at least 10 minutes in the future)
+      if (formData.bookingType === "hourly") {
+        const bookingDateTime = new Date(formData.date);
+        const [hours, minutes] = formData.startTime.split(':').map(Number);
+        bookingDateTime.setHours(hours, minutes, 0, 0);
+        
+        const currentTime = new Date();
+        const minimumBookingTime = addMinutes(currentTime, 10);
+        
+        if (isBefore(bookingDateTime, minimumBookingTime)) {
+          toast({
+            title: "Invalid Booking Time",
+            description: "Hourly bookings must be at least 10 minutes in the future.",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+      
       setLoading(true);
       
       // Prepare the booking data for API
@@ -113,60 +152,58 @@ export const BookingForm = ({ selectedRoomId, isReceptionist = false, onComplete
         guestName: formData.guestName,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
-        bookingType: formData.bookingType.toUpperCase(),
-        specialRequests: formData.specialRequests,
+        bookingType: formData.bookingType,
         date: format(formData.date, "yyyy-MM-dd"),
         startTime: formData.startTime,
-        durationHours: parseInt(formData.durationHours.toString())
+        durationHours: parseInt(formData.durationHours),
+        paymentMethod: formData.paymentMethod,
+        status: formData.status
       };
       
-      // Send booking request to API
-      const token = localStorage.getItem('authToken');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json'
-      };
-      
-      if (token && !isReceptionist) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      
-      const response = await fetch('http://localhost:8080/api/bookings', {
-        method: 'POST',
-        headers,
+      // Send booking data to API
+      const authToken = localStorage.getItem("authToken");
+
+      const response = await fetch("http://localhost:8080/api/bookings/user/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authToken}`
+        },
         body: JSON.stringify(bookingData)
       });
       
-      // Handle API response
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Booking failed: ${response.statusText}`);
+        throw new Error("Failed to create booking");
       }
       
-      const data = await response.json();
+
       
-      setBookingId(data.id || data.bookingId);
-      setTotalAmount(data.totalCharges || data.amount || 100);
-      
-      // Show payment form for guest bookings
-      if (!isReceptionist) {
-        setShowPaymentForm(true);
-      } else {
-        // For receptionist bookings, just show success toast
-        toast({
-          title: "Booking Successful",
-          description: `Booking has been created successfully. Booking ID: ${data.id || data.bookingId}`,
+      // Update room status
+      if (formData.roomId) {
+        const roomUpdateResponse = await fetch(`http://localhost:8080/api/rooms/${formData.roomId}/status`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ status: "RESERVED" })
         });
         
-        if (onComplete) {
-          onComplete();
-        }
+        if (!roomUpdateResponse.ok) throw new Error("Failed to update room status");
       }
       
-    } catch (error) {
-      console.error("Booking error:", error);
       toast({
-        title: "Booking Error",
-        description: error instanceof Error ? error.message : "Failed to create booking",
+        title: "Booking Successful!",
+        description: `Your booking for ${format(formData.date, "PPP")} has been confirmed. A confirmation code has been sent to your email.`,
+      });
+      
+      setBookingSuccessful(true);
+      
+    } catch (error) {
+      console.error("Error creating booking:", error);
+      toast({
+        title: "Booking Failed",
+        description: "There was an error processing your booking. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -174,241 +211,244 @@ export const BookingForm = ({ selectedRoomId, isReceptionist = false, onComplete
     }
   };
   
-  // Handle booking completion after payment
-  const handleBookingComplete = () => {
-    toast({
-      title: "Booking Successful",
-      description: `Your booking has been confirmed. Booking ID: ${bookingId}`,
-    });
-    
-    // Reset form
-    setFormData({
-      roomId: "",
-      guestName: "",
-      email: "",
-      phoneNumber: "",
-      bookingType: "daily",
-      date: new Date(),
-      startTime: "12:00",
-      durationHours: 3,
-      specialRequests: ""
-    });
-    
-    setShowPaymentForm(false);
-    
+  const handleCloseQR = () => {
+    setBookingSuccessful(false);
     if (onComplete) {
       onComplete();
     }
   };
-
-  // Get available times for booking
-  const getTimeOptions = () => {
-    const times = [];
-    for (let hour = 0; hour < 24; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const hourStr = hour.toString().padStart(2, '0');
-        const minuteStr = minute.toString().padStart(2, '0');
-        times.push(`${hourStr}:${minuteStr}`);
-      }
-    }
-    return times;
-  };
-
-  // Get room price based on type
-  const getRoomPrice = (roomId: string, type: string) => {
-    const room = rooms.find(r => r.id === roomId);
-    if (!room) return 0;
-    
-    switch(type.toLowerCase()) {
-      case 'hourly':
-        return room.hourlyRate || 25;
-      case 'overnight':
-        return room.overnightRate || 120;
-      case 'daily':
-      default:
-        return room.dailyRate || 80;
-    }
+  
+  const getSelectedRoom = () => {
+    return availableRooms.find(room => room.id.toString() === formData.roomId);
   };
   
-  if (showPaymentForm && bookingId) {
-    return (
-      <PaymentSummary 
-        amount={totalAmount} 
-        onComplete={handleBookingComplete} 
-        onCancel={() => setShowPaymentForm(false)}
-      />
-    );
-  }
-  
+  const selectedRoom = getSelectedRoom();
+ 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="roomId">Select Room</Label>
-        <Select
-          name="roomId"
-          value={formData.roomId}
-          onValueChange={(value) => setFormData({ ...formData, roomId: value })}
-          disabled={fetchingRooms}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select a room" />
-          </SelectTrigger>
-          <SelectContent>
-            {fetchingRooms ? (
-              <SelectItem value="" disabled>Loading rooms...</SelectItem>
-            ) : rooms.length > 0 ? (
-              rooms.map((room) => (
-                <SelectItem key={room.id} value={room.id}>
-                  {room.roomNumber} - {room.roomType}
-                </SelectItem>
-              ))
-            ) : (
-              <SelectItem value="" disabled>No rooms available</SelectItem>
-            )}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div>
-        <Label htmlFor="guestName">Guest Name</Label>
-        <Input
-          type="text"
-          id="guestName"
-          name="guestName"
-          value={formData.guestName}
-          onChange={handleInputChange}
-          placeholder="Enter guest name"
-          required
-        />
-      </div>
-      
-      <div>
-        <Label htmlFor="email">Email</Label>
-        <Input
-          type="email"
-          id="email"
-          name="email"
-          value={formData.email}
-          onChange={handleInputChange}
-          placeholder="Enter email"
-          required
-        />
-      </div>
-      
-      <div>
-        <Label htmlFor="phoneNumber">Phone Number</Label>
-        <Input
-          type="tel"
-          id="phoneNumber"
-          name="phoneNumber"
-          value={formData.phoneNumber}
-          onChange={handleInputChange}
-          placeholder="Enter phone number"
-          required
-        />
-      </div>
-      
-      <div>
-        <Label>Booking Type</Label>
-        <RadioGroup
-          defaultValue={formData.bookingType}
-          onValueChange={(value) => setFormData({ ...formData, bookingType: value })}
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="hourly" id="hourly" />
-            <Label htmlFor="hourly">Hourly</Label>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="roomId">Select Room</Label>
+            <Select
+              value={formData.roomId}
+              onValueChange={(value) => handleSelectChange("roomId", value)}
+              disabled={loading || availableRooms.length === 0}
+            >
+              <SelectTrigger id="roomId">
+                <SelectValue placeholder="Select a room" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableRooms.map(room => (
+                  <SelectItem key={room.id} value={room.id.toString()}>
+                    Room {room.roomNumber} - {room.category?.name || "Standard"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="daily" id="daily" />
-            <Label htmlFor="daily">Daily</Label>
+
+          <div className="space-y-2">
+            <Label htmlFor="guestName">Guest Name</Label>
+            <Input
+              id="guestName"
+              name="guestName"
+              value={formData.guestName}
+              onChange={handleInputChange}
+              placeholder="Full name"
+              disabled={loading}
+              required
+            />
           </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="overnight" id="overnight" />
-            <Label htmlFor="overnight">Overnight</Label>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              placeholder="Email address"
+              disabled={loading}
+              required
+            />
           </div>
-        </RadioGroup>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <Label>Date</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !formData.date && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {formData.date ? format(formData.date, "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={formData.date}
-                onSelect={handleDateChange}
-                disabled={(date) =>
-                  date < new Date()
-                }
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+
+          <div className="space-y-2">
+            <Label htmlFor="phoneNumber">Phone Number</Label>
+            <Input
+              id="phoneNumber"
+              name="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
+              placeholder="Phone number"
+              disabled={loading}
+            />
+          </div>
         </div>
         
-        <div>
-          <Label htmlFor="startTime">Start Time</Label>
-          <Select
-            name="startTime"
-            value={formData.startTime}
-            onValueChange={(value) => setFormData({ ...formData, startTime: value })}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select a time" />
-            </SelectTrigger>
-            <SelectContent>
-              {getTimeOptions().map((time) => (
-                <SelectItem key={time} value={time}>
-                  {time}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="bookingType">Booking Type</Label>
+            <Select
+              value={formData.bookingType}
+              onValueChange={(value) => handleSelectChange("bookingType", value)}
+              disabled={loading}
+            >
+              <SelectTrigger id="bookingType">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="hourly">Hourly</SelectItem>
+                <SelectItem value="daily">Full Day</SelectItem>
+                <SelectItem value="overnight">Overnight</SelectItem>
+              </SelectContent>
+            </Select>
+            {formData.bookingType === "hourly" && (
+              <p className="text-xs text-amber-600 flex items-center mt-1">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                Hourly bookings must be at least 10 minutes in the future
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !formData.date && "text-muted-foreground"
+                  )}
+                  disabled={loading}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {formData.date ? format(formData.date, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={formData.date}
+                  onSelect={handleDateChange}
+                  initialFocus
+                  disabled={(date) => date < new Date()}
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="startTime">Start Time</Label>
+            <div className="flex items-center">
+              <Clock className="mr-2 h-4 w-4 text-gray-400" />
+              <Input
+                id="startTime"
+                name="startTime"
+                type="time"
+                value={formData.startTime}
+                onChange={handleInputChange}
+                disabled={loading}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="durationHours">Duration ({formData.bookingType === "hourly" ? "Hours" : "Days"})</Label>
+            <Select
+              value={formData.durationHours}
+              onValueChange={(value) => handleSelectChange("durationHours", value)}
+              disabled={loading}
+            >
+              <SelectTrigger id="durationHours">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {formData.bookingType === "hourly" ? (
+                  <>
+                    <SelectItem value="1">1 Hour</SelectItem>
+                    <SelectItem value="2">2 Hours</SelectItem>
+                    <SelectItem value="3">3 Hours</SelectItem>
+                    <SelectItem value="4">4 Hours</SelectItem>
+                    <SelectItem value="6">6 Hours</SelectItem>
+                  </>
+                ) : (
+                  <>
+                    <SelectItem value="1">1 Day</SelectItem>
+                    <SelectItem value="2">2 Days</SelectItem>
+                    <SelectItem value="3">3 Days</SelectItem>
+                    <SelectItem value="4">4 Days</SelectItem>
+                    <SelectItem value="7">1 Week</SelectItem>
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Payment Method</Label>
+            <Select
+              value={formData.paymentMethod}
+              onValueChange={(value) => handleSelectChange("paymentMethod", value)}
+              disabled={loading}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="card">Card</SelectItem>
+                <SelectItem value="ecocash">EcoCash</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
       
-      <div>
-        <Label htmlFor="durationHours">Duration (Hours)</Label>
-        <Input
-          type="number"
-          id="durationHours"
-          name="durationHours"
-          value={formData.durationHours}
-          onChange={handleInputChange}
-          placeholder="Enter duration in hours"
-          min="1"
-          required
-        />
-      </div>
-      
-      <div>
-        <Label htmlFor="specialRequests">Special Requests</Label>
-        <Input
-          type="textarea"
-          id="specialRequests"
-          name="specialRequests"
-          value={formData.specialRequests}
-          onChange={handleInputChange}
-          placeholder="Enter any special requests"
-        />
-      </div>
+      {selectedRoom && (
+        <Card className="p-4 bg-gray-50">
+          <div className="flex justify-between mb-2">
+            <span className="text-sm text-gray-600">Room:</span>
+            <span className="font-medium">Room {selectedRoom.roomNumber} ({selectedRoom.category?.name || "Standard"})</span>
+          </div>
+          <div className="flex justify-between mb-2">
+            <span className="text-sm text-gray-600">Rate:</span>
+            <span className="font-medium">
+              ${formData.bookingType === "hourly" ? 
+                (selectedRoom.baseHourlyRate || 25) : 
+                (selectedRoom.baseDailyRate || 100)
+              } per {formData.bookingType === "hourly" ? "hour" : "day"}
+            </span>
+          </div>
+          <div className="flex justify-between mb-2">
+            <span className="text-sm text-gray-600">Duration:</span>
+            <span className="font-medium">
+              {formData.durationHours} {formData.bookingType === "hourly" ? 
+                (parseInt(formData.durationHours) === 1 ? "hour" : "hours") : 
+                (parseInt(formData.durationHours) === 1 ? "day" : "days")
+              }
+            </span>
+          </div>
+          <div className="flex justify-between border-t pt-2 mt-2">
+            <span className="font-medium">Total:</span>
+            <span className="font-medium text-lg">${formData.totalAmount}</span>
+          </div>
+        </Card>
+      )}
       
       <div className="flex justify-end">
-        <Button type="submit" disabled={loading}>
-          {loading ? "Submitting..." : "Submit Booking"}
+        {onComplete && (
+          <Button type="button" variant="outline" className="mr-2" onClick={onComplete} disabled={loading}>
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" disabled={loading || !formData.roomId}>
+          {loading ? "Processing..." : "Complete Booking"}
         </Button>
       </div>
     </form>
