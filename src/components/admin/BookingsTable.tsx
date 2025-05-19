@@ -198,15 +198,15 @@ export function BookingsTable() {
                       <TableCell className="font-medium">{booking.bookingCode}</TableCell>
                       <TableCell>{booking.guestName}</TableCell>
                       <TableCell>{booking.room.roomNumber}</TableCell>
-                      <TableCell>{formatDate(booking.scheduledCheckIn)}</TableCell>
-                      <TableCell>{formatDate(booking.scheduledCheckOut)}</TableCell>
-                      <TableCell>{booking.type}</TableCell>
+                      <TableCell>{formatDate(booking.actualCheckIn)}</TableCell>
+                      <TableCell>{formatDate(booking.actualCheckOut)}</TableCell>
+                      <TableCell>{booking.durationHours}</TableCell>
                       {activeTab === "active" && (
                         <TableCell>
                           {booking.status === "CHECKED_IN" ? (
                             <div className="flex items-center">
                               <Clock className="h-3 w-3 mr-1 text-blue-500" />
-                              <span className={calculateTimeLeft(booking.scheduledCheckOut).startsWith("0") ? "text-red-500 font-medium" : ""}>
+                              <span className={calculateTimeLeft(booking.actualCheckIn).startsWith("0") ? "text-red-500 font-medium" : ""}>
                                 {calculateTimeLeft(booking.scheduledCheckOut)}
                               </span>
                             </div>
