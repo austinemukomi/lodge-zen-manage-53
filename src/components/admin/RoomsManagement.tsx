@@ -115,7 +115,24 @@ export function RoomsManagement() {
         throw new Error("Failed to fetch room categories");
       }
       const data = await response.json();
-      setRoomCategories(data);
+      
+      // Fetch images for each category
+      const categoriesWithImages = await Promise.all(
+        data.map(async (category) => {
+          try {
+            const imageResponse = await fetch(`http://localhost:8080/api/room-categories/${category.id}/images`);
+            if (imageResponse.ok) {
+              const imageData = await imageResponse.json();
+              return { ...category, images: imageData };
+            }
+          } catch (error) {
+            console.error(`Error fetching images for category ${category.id}:`, error);
+          }
+          return category;
+        })
+      );
+      
+      setRoomCategories(categoriesWithImages);
     } catch (error) {
       console.error("Error fetching room categories:", error);
       toast({
@@ -1219,7 +1236,18 @@ export function RoomsManagement() {
                 <Card key={category.id}>
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div>
+                      <div className="w-full">
+                        {/* Display the first image as a featured image if available */}
+                        {category.images && category.images.length > 0 && (
+                          <div className="mb-3 w-full">
+                            <img 
+                              src={category.images[0]} 
+                              alt={`${category.name}`}
+                              className="w-full h-48 object-cover rounded-md" 
+                            />
+                          </div>
+                        )}
+                        
                         <div className="flex items-center gap-2">
                           <h4 className="text-base font-medium">{category.name}</h4>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${category.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
@@ -1228,16 +1256,16 @@ export function RoomsManagement() {
                         </div>
                         <p className="text-sm text-gray-600 mt-1">{category.description}</p>
                         <div className="flex flex-wrap gap-1 mt-1">
-                            {Array.isArray(category.amenities) &&
-                              category.amenities.map((amenity, i) => (
-                                <span
-                                  key={i}
-                                  className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full"
-                                >
-                                  {amenity}
-                                </span>
-                              ))}
-                          </div>
+                          {Array.isArray(category.amenities) &&
+                            category.amenities.map((amenity, i) => (
+                              <span
+                                key={i}
+                                className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full"
+                              >
+                                {amenity}
+                              </span>
+                            ))}
+                        </div>
 
                         <p className="text-xs mt-2">Rooms: {category.roomCount || 0} | Base Rate: ${category.baseHourlyRate}/hr</p>
                       </div>
@@ -1280,11 +1308,11 @@ export function RoomsManagement() {
                       </div>
                     </div>
                     
-                    {/* Display category images if available */}
-                    {category.images && category.images.length > 0 && (
+                    {/* Display all category images in a smaller grid */}
+                    {category.images && category.images.length > 1 && (
                       <div className="mt-4">
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                          {category.images.map((img, index) => (
+                          {category.images.slice(1).map((img, index) => (
                             <img 
                               key={index} 
                               src={img} 
