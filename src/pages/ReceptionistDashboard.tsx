@@ -82,7 +82,8 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
         const response = await fetch('http://localhost:8080/api/bookings');
         
         if (!response.ok) {
-          throw new Error(`Error fetching bookings: ${response.statusText}`);
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Error fetching bookings: ${response.statusText}`);
         }
         
         const data: Booking[] = await response.json();
@@ -137,7 +138,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
         console.error("Error fetching data:", err);
         toast({
           title: "Error",
-          description: "Failed to load dashboard data",
+          description: err instanceof Error ? err.message : "Failed to load dashboard data",
           variant: "destructive"
         });
       } finally {
@@ -156,12 +157,17 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
   // Process checkout
   const handleCheckout = async (bookingCode: string) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/guest/check-out?bookingCode=${bookingCode}`, {
-        method: 'POST'
+      const response = await fetch(`http://localhost:8080/api/guest/check-out`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ bookingCode })
       });
       
       if (!response.ok) {
-        throw new Error(`Error processing checkout: ${response.statusText}`);
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Error processing checkout: ${response.statusText}`);
       }
       
       toast({
@@ -177,7 +183,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
       console.error("Error checking out:", err);
       toast({
         title: "Error",
-        description: "Failed to process checkout",
+        description: err instanceof Error ? err.message : "Failed to process checkout",
         variant: "destructive"
       });
     }

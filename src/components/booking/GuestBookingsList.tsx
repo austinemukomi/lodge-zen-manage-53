@@ -1,10 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Calendar, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PaymentSummary } from "./PaymentSummary";
-import { QRCodeDisplay } from "./QRCodeDisplay";
 
 interface Booking {
   id: string;
@@ -44,14 +44,15 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
           return;
         }
         
-        const response = await fetch('http://localhost:8080/auth/bookings', {
+        const response = await fetch('http://localhost:8080/api/bookings', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         
         if (!response.ok) {
-          throw new Error(`Error fetching bookings: ${response.statusText}`);
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Error fetching bookings: ${response.statusText}`);
         }
         
         const data = await response.json();
@@ -74,7 +75,7 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
         console.error("Error fetching bookings:", error);
         toast({
           title: "Error",
-          description: "Failed to load your bookings",
+          description: error instanceof Error ? error.message : "Failed to load your bookings",
           variant: "destructive"
         });
       } finally {

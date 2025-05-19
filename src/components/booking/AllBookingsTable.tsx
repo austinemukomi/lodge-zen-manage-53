@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -50,7 +49,8 @@ export const AllBookingsTable: React.FC = () => {
         const response = await fetch('http://localhost:8080/api/bookings');
         
         if (!response.ok) {
-          throw new Error(`Error fetching bookings: ${response.statusText}`);
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Error fetching bookings: ${response.statusText}`);
         }
         
         const data = await response.json();
