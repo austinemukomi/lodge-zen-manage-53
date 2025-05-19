@@ -25,7 +25,6 @@ interface GuestBookingsListProps {
 export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showQr, setShowQr] = useState<string | null>(null);
   const [showPayment, setShowPayment] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -183,9 +182,6 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
             <div className="flex flex-wrap gap-2">
               {booking.status === 'confirmed' && (
                 <>
-                  <Button size="sm" variant="outline" onClick={() => setShowQr(booking.id)}>
-                    Generate QR Code
-                  </Button>
                   {!booking.isPaid && (
                     <Button size="sm" variant="outline" onClick={() => setShowPayment(booking.id)}>
                       Pay Now
@@ -199,9 +195,9 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
               )}
               
               {booking.status === 'checked-in' && (
-                <Button size="sm" variant="outline">
-                  Check Out Early
-                </Button>
+                <div className="text-sm text-gray-600">
+                  Checked in by reception staff
+                </div>
               )}
               
               {booking.status === 'completed' && (
@@ -211,12 +207,6 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
               )}
             </div>
           </div>
-          
-          {showQr === booking.id && (
-            <div className="p-4 border-t">
-              <QRCodeDisplay bookingId={booking.id} onClose={() => setShowQr(null)} />
-            </div>
-          )}
           
           {showPayment === booking.id && (
             <div className="p-4 border-t">

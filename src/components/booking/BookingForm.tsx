@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -7,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { format, addMinutes, isBefore } from "date-fns";
+import { Calendar as CalendarIcon, Clock, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { Room } from "@/utils/types";
@@ -126,6 +125,25 @@ export const BookingForm: React.FC<BookingFormProps> = ({
     e.preventDefault();
     
     try {
+      // Check if hourly booking meets the time restriction (at least 10 minutes in the future)
+      if (formData.bookingType === "hourly") {
+        const bookingDateTime = new Date(formData.date);
+        const [hours, minutes] = formData.startTime.split(':').map(Number);
+        bookingDateTime.setHours(hours, minutes, 0, 0);
+        
+        const currentTime = new Date();
+        const minimumBookingTime = addMinutes(currentTime, 10);
+        
+        if (isBefore(bookingDateTime, minimumBookingTime)) {
+          toast({
+            title: "Invalid Booking Time",
+            description: "Hourly bookings must be at least 10 minutes in the future.",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+      
       setLoading(true);
       
       // Prepare the booking data for API
@@ -287,6 +305,12 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                 <SelectItem value="overnight">Overnight</SelectItem>
               </SelectContent>
             </Select>
+            {formData.bookingType === "hourly" && (
+              <p className="text-xs text-amber-600 flex items-center mt-1">
+                <AlertCircle className="h-3 w-3 mr-1" />
+                Hourly bookings must be at least 10 minutes in the future
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -430,4 +454,3 @@ export const BookingForm: React.FC<BookingFormProps> = ({
     </form>
   );
 };
-
