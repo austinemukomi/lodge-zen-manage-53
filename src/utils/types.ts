@@ -1,4 +1,3 @@
-
 export type UserRole = "ADMIN" | "RECEPTIONIST" | "USER" | "CLEANER";
 
 // Updated to match the actual case used in the API responses
@@ -24,25 +23,23 @@ export interface RoomCategory {
 }
 
 export interface Room {
-  id: string;
-  number: string;
-  roomNumber?: string; // Added to match API response
-  type: RoomType;
-  status: RoomStatus;
-  pricePerHour: number;
-  pricePerDay: number;
-  priceOvernight: number;
+  id: number | string;
+  roomNumber: string;
+  status: string;
   floor: number;
-  capacity: number;
-  lastCleaned?: Date;
-  
-  // Additional properties from API response
-  category?: RoomCategory;
-  baseHourlyRate?: number;
-  baseDailyRate?: number;
-  maxOccupancy?: number;
   specialFeatures?: string;
   lastCleanedAt?: string;
+  category?: {
+    id: number;
+    name: string;
+  };
+  baseHourlyRate?: number;
+  baseDailyRate?: number;
+  baseOvernightRate?: number;
+  // Add compatibility with older code
+  pricePerHour?: number;
+  pricePerDay?: number;
+  priceOvernight?: number;
 }
 
 export interface Guest {

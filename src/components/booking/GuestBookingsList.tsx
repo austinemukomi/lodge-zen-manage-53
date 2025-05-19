@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -44,14 +45,15 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
           return;
         }
         
-        const response = await fetch('http://localhost:8080/auth/bookings', {
+        const response = await fetch('http://localhost:8080/api/bookings', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         
         if (!response.ok) {
-          throw new Error(`Error fetching bookings: ${response.statusText}`);
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Error fetching bookings: ${response.statusText}`);
         }
         
         const data = await response.json();
@@ -72,9 +74,10 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
         setBookings(limit ? formattedBookings.slice(0, limit) : formattedBookings);
       } catch (error) {
         console.error("Error fetching bookings:", error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to load your bookings';
         toast({
           title: "Error",
-          description: "Failed to load your bookings",
+          description: errorMessage,
           variant: "destructive"
         });
       } finally {
@@ -98,12 +101,44 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
     return statusMap[apiStatus?.toUpperCase()] || 'confirmed';
   };
 
-  const handleCancel = (bookingId: string) => {
-    toast({
-      title: "Booking Cancelled",
-      description: "Your booking has been successfully cancelled."
-    });
-    setBookings(bookings.filter(booking => booking.id !== bookingId));
+  const handleCancel = async (bookingId: string) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in to cancel your booking",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const response = await fetch(`http://localhost:8080/api/bookings/${bookingId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Error cancelling booking: ${response.statusText}`);
+      }
+      
+      toast({
+        title: "Booking Cancelled",
+        description: "Your booking has been successfully cancelled."
+      });
+      setBookings(bookings.filter(booking => booking.id !== bookingId));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to cancel booking';
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+    }
   };
 
   const formatDate = (date: Date) => {

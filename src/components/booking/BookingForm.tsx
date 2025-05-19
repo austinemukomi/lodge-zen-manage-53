@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -6,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, addMinutes, isBefore } from "date-fns";
-import { Calendar as CalendarIcon, Clock, AlertCircle } from "lucide-react";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { Room } from "@/utils/types";
@@ -49,7 +50,10 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       try {
         setLoading(true);
         const response = await fetch("http://localhost:8080/api/rooms");
-        if (!response.ok) throw new Error("Failed to fetch rooms");
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to fetch rooms");
+        }
         
         const data = await response.json();
         const availableRooms = data.filter((room: any) => room.status === "AVAILABLE");
@@ -64,9 +68,10 @@ export const BookingForm: React.FC<BookingFormProps> = ({
         }
       } catch (error) {
         console.error("Error fetching available rooms:", error);
+        const errorMessage = error instanceof Error ? error.message : "Failed to load available rooms";
         toast({
           title: "Error",
-          description: "Failed to load available rooms",
+          description: errorMessage,
           variant: "destructive"
         });
       } finally {
@@ -84,10 +89,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
     const selectedRoom = availableRooms.find(room => room.id.toString() === formData.roomId);
     if (!selectedRoom) return;
     
-    const rate = formData.bookingType === "hourly" ? 
-      (selectedRoom.baseHourlyRate || 25) : 
-      (selectedRoom.baseDailyRate || 100);
-    
+    const rate = getRoomPrice(selectedRoom, formData.bookingType);
     const duration = parseInt(formData.durationHours);
     const total = rate * duration;
     
@@ -96,6 +98,19 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       totalAmount: total
     }));
   }, [formData.roomId, formData.bookingType, formData.durationHours, availableRooms]);
+
+  // Helper function to get the appropriate room price based on booking type
+  const getRoomPrice = (room: Room, bookingType: string): number => {
+    switch (bookingType) {
+      case "hourly":
+        return room.baseHourlyRate || room.pricePerHour || 25;
+      case "overnight":
+        return room.baseOvernightRate || room.priceOvernight || 70;
+      case "daily":
+      default:
+        return room.baseDailyRate || room.pricePerDay || 100;
+    }
+  };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -125,25 +140,6 @@ export const BookingForm: React.FC<BookingFormProps> = ({
     e.preventDefault();
     
     try {
-      // Check if hourly booking meets the time restriction (at least 10 minutes in the future)
-      if (formData.bookingType === "hourly") {
-        const bookingDateTime = new Date(formData.date);
-        const [hours, minutes] = formData.startTime.split(':').map(Number);
-        bookingDateTime.setHours(hours, minutes, 0, 0);
-        
-        const currentTime = new Date();
-        const minimumBookingTime = addMinutes(currentTime, 10);
-        
-        if (isBefore(bookingDateTime, minimumBookingTime)) {
-          toast({
-            title: "Invalid Booking Time",
-            description: "Hourly bookings must be at least 10 minutes in the future.",
-            variant: "destructive"
-          });
-          return;
-        }
-      }
-      
       setLoading(true);
       
       // Prepare the booking data for API
@@ -172,12 +168,12 @@ export const BookingForm: React.FC<BookingFormProps> = ({
         body: JSON.stringify(bookingData)
       });
       
-      
       if (!response.ok) {
-        throw new Error("Failed to create booking");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create booking");
       }
       
-
+      const responseData = await response.json();
       
       // Update room status
       if (formData.roomId) {
@@ -189,7 +185,10 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           body: JSON.stringify({ status: "RESERVED" })
         });
         
-        if (!roomUpdateResponse.ok) throw new Error("Failed to update room status");
+        if (!roomUpdateResponse.ok) {
+          const errorData = await roomUpdateResponse.json();
+          throw new Error(errorData.message || "Failed to update room status");
+        }
       }
       
       toast({
@@ -198,12 +197,16 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       });
       
       setBookingSuccessful(true);
+      if (responseData && responseData.bookingCode) {
+        setBookingCode(responseData.bookingCode);
+      }
       
     } catch (error) {
       console.error("Error creating booking:", error);
+      const errorMessage = error instanceof Error ? error.message : "There was an error processing your booking. Please try again.";
       toast({
         title: "Booking Failed",
-        description: "There was an error processing your booking. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

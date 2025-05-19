@@ -56,7 +56,8 @@ export function BookingsTable() {
         const response = await fetch('http://localhost:8080/api/bookings');
         
         if (!response.ok) {
-          throw new Error(`Error fetching bookings: ${response.statusText}`);
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Error fetching bookings: ${response.statusText}`);
         }
         
         const data = await response.json();
