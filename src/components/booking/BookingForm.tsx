@@ -143,20 +143,23 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       };
       
       // Send booking data to API
-      const response = await fetch("http://localhost:8080/api/bookings", {
+      const authToken = localStorage.getItem("authToken");
+
+      const response = await fetch("http://localhost:8080/api/bookings/user/bookings", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authToken}`
         },
         body: JSON.stringify(bookingData)
       });
+      
       
       if (!response.ok) {
         throw new Error("Failed to create booking");
       }
       
-      const result = await response.json();
-      setBookingCode(result.bookingCode || "BOOK123"); // Use the booking code from response or fallback
+
       
       // Update room status
       if (formData.roomId) {
@@ -202,11 +205,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   };
   
   const selectedRoom = getSelectedRoom();
-  
-  if (bookingSuccessful) {
-    return <QRCodeDisplay bookingId={bookingCode} onClose={handleCloseQR} />;
-  }
-  
+ 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
