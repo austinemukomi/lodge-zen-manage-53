@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Clock } from "lucide-react";
+import { AlertCircle, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { Room } from "@/utils/types";
@@ -159,7 +159,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       // Send booking data to API
       const authToken = localStorage.getItem("authToken");
 
-      const response = await fetch("http://localhost:8080/api/bookings/user/bookings", {
+      const response = await fetch("http://localhost:8080/api/bookings", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
