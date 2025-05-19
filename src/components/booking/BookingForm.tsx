@@ -221,12 +221,12 @@ export const BookingForm = ({ selectedRoomId, isReceptionist = false, onComplete
     
     switch(type.toLowerCase()) {
       case 'hourly':
-        return room.pricePerHour || room.baseHourlyRate || 25;
+        return room.hourlyRate || 25;
       case 'overnight':
-        return room.priceOvernight || 120;
+        return room.overnightRate || 120;
       case 'daily':
       default:
-        return room.pricePerDay || room.baseDailyRate || 80;
+        return room.dailyRate || 80;
     }
   };
   
@@ -259,7 +259,7 @@ export const BookingForm = ({ selectedRoomId, isReceptionist = false, onComplete
             ) : rooms.length > 0 ? (
               rooms.map((room) => (
                 <SelectItem key={room.id} value={room.id}>
-                  {room.roomNumber || room.number} - {room.type}
+                  {room.roomNumber} - {room.roomType}
                 </SelectItem>
               ))
             ) : (
