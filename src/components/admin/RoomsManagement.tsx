@@ -121,8 +121,10 @@ export function RoomsManagement() {
         data.map(async (category) => {
           try {
             const imageResponse = await fetch(`http://localhost:8080/api/room-categories/${category.id}/images`);
+            
             if (imageResponse.ok) {
               const imageData = await imageResponse.json();
+              console.log(imageData);
               return { ...category, images: imageData };
             }
           } catch (error) {
@@ -1106,7 +1108,7 @@ export function RoomsManagement() {
                             <img 
                               src={img} 
                               alt={`${selectedCategory.name} ${index+1}`} 
-                              className="w-full h-24 object-cover rounded-md"
+                              className="w-full h-24 object-contain rounded-md" width={24}
                             />
                             <button 
                               type="button"
@@ -1236,6 +1238,7 @@ export function RoomsManagement() {
                 <Card key={category.id}>
                   <CardContent className="p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                     
                       <div className="w-full">
                         {/* Display the first image as a featured image if available */}
                         {category.images && category.images.length > 0 && (
@@ -1243,7 +1246,7 @@ export function RoomsManagement() {
                             <img 
                               src={category.images[0]} 
                               alt={`${category.name}`}
-                              className="w-full h-48 object-cover rounded-md" 
+                              className="w-full h-48 object-contain rounded-md" 
                             />
                           </div>
                         )}
