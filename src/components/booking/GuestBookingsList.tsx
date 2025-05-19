@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -30,52 +29,48 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
   const [showPayment, setShowPayment] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Mock data - in a real application, this would come from an API
   useEffect(() => {
     const fetchBookings = async () => {
       try {
         setLoading(true);
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 800));
+        const token = localStorage.getItem('authToken');
         
-        // Mock data
-        const mockBookings: Booking[] = [
-          {
-            id: 'b001',
-            roomNumber: '204',
-            roomType: 'Deluxe',
-            checkInDate: new Date(new Date().getTime() + 24 * 60 * 60 * 1000), // tomorrow
-            checkOutDate: new Date(new Date().getTime() + 3 * 24 * 60 * 60 * 1000), // 3 days later
-            status: 'confirmed',
-            amount: 450,
-            isPaid: true,
-            bookingType: 'daily'
-          },
-          {
-            id: 'b002',
-            roomNumber: '305',
-            roomType: 'Standard',
-            checkInDate: new Date(),
-            checkOutDate: new Date(new Date().getTime() + 5 * 60 * 60 * 1000), // 5 hours later
-            status: 'checked-in',
-            amount: 125,
-            isPaid: true,
-            bookingType: 'hourly'
-          },
-          {
-            id: 'b003',
-            roomNumber: '502',
-            roomType: 'Suite',
-            checkInDate: new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000), // a week later
-            checkOutDate: new Date(new Date().getTime() + 9 * 24 * 60 * 60 * 1000), // 9 days later
-            status: 'confirmed',
-            amount: 650,
-            isPaid: false,
-            bookingType: 'overnight'
+        if (!token) {
+          toast({
+            title: "Authentication Error",
+            description: "Please log in to view your bookings",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+        
+        const response = await fetch('http://localhost:8080/auth/bookings', {
+          headers: {
+            'Authorization': `Bearer ${token}`
           }
-        ];
+        });
         
-        setBookings(limit ? mockBookings.slice(0, limit) : mockBookings);
+        if (!response.ok) {
+          throw new Error(`Error fetching bookings: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Transform API data to match component's expected format if needed
+        const formattedBookings: Booking[] = data.map((item: any) => ({
+          id: item.id || item.bookingId || '',
+          roomNumber: item.roomNumber || (item.room?.roomNumber || ''),
+          roomType: item.roomType || (item.room?.roomType || ''),
+          checkInDate: new Date(item.checkInDate || item.scheduledCheckIn),
+          checkOutDate: new Date(item.checkOutDate || item.scheduledCheckOut),
+          status: mapBookingStatus(item.status),
+          amount: item.totalCharges || item.amount || 0,
+          isPaid: item.isPaid !== undefined ? item.isPaid : true,
+          bookingType: item.bookingType?.toLowerCase() || 'daily'
+        }));
+        
+        setBookings(limit ? formattedBookings.slice(0, limit) : formattedBookings);
       } catch (error) {
         console.error("Error fetching bookings:", error);
         toast({
@@ -90,6 +85,19 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
     
     fetchBookings();
   }, [limit]);
+
+  // Helper function to map API status values to component's expected format
+  const mapBookingStatus = (apiStatus: string): 'confirmed' | 'checked-in' | 'completed' | 'cancelled' => {
+    const statusMap: Record<string, 'confirmed' | 'checked-in' | 'completed' | 'cancelled'> = {
+      'RESERVED': 'confirmed',
+      'CHECKED_IN': 'checked-in',
+      'COMPLETED': 'completed',
+      'CANCELLED': 'cancelled',
+      'OVERDUE': 'checked-in'
+    };
+    
+    return statusMap[apiStatus?.toUpperCase()] || 'confirmed';
+  };
 
   const handleCancel = (bookingId: string) => {
     toast({

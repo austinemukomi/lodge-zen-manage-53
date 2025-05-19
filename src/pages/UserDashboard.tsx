@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -10,6 +11,8 @@ import { BookingForm } from "@/components/booking/BookingForm";
 import { GuestBookingsList } from "@/components/booking/GuestBookingsList";
 import { PaymentSummary } from "@/components/booking/PaymentSummary";
 import { useToast } from "@/components/ui/use-toast";
+import { ProfileEditor } from "@/components/profile/ProfileEditor";
+import { useProfile } from "@/hooks/useProfile";
 
 interface UserDashboardProps {
   onLogout: () => void;
@@ -18,6 +21,7 @@ interface UserDashboardProps {
 const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const { toast } = useToast();
+  const { profile, loading } = useProfile();
   
   // Show welcome toast once on component mount
   useEffect(() => {
@@ -46,6 +50,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
               <TabsTrigger value="browse">Browse Rooms</TabsTrigger>
               <TabsTrigger value="bookings">My Bookings</TabsTrigger>
               <TabsTrigger value="booking-form">Book a Room</TabsTrigger>
+              <TabsTrigger value="profile">My Profile</TabsTrigger>
             </TabsList>
             
             <TabsContent value="dashboard" className="pt-4">
@@ -96,12 +101,20 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
                   <div className="bg-white rounded-lg shadow-sm border p-6">
                     <div className="flex flex-col items-center">
                       <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xl">
-                        JD
+                        {!loading && profile ? 
+                          (profile.firstName?.charAt(0) || '') + (profile.lastName?.charAt(0) || '') || 
+                          profile.username?.substring(0, 2).toUpperCase() || 'JD' : 'JD'}
                       </div>
-                      <h3 className="text-lg font-medium mt-3">John Doe</h3>
+                      <h3 className="text-lg font-medium mt-3">
+                        {!loading && profile ? 
+                          `${profile.firstName || ''} ${profile.lastName || ''}` || profile.username : 
+                          "Loading..."}
+                      </h3>
                       <p className="text-sm text-gray-600">Guest Member</p>
                       <div className="mt-4 w-full">
-                        <Button variant="outline" className="w-full">Edit Profile</Button>
+                        <Button variant="outline" className="w-full" onClick={() => setActiveTab("profile")}>
+                          Edit Profile
+                        </Button>
                       </div>
                     </div>
                     
@@ -217,6 +230,10 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
                   <BookingForm />
                 </CardContent>
               </Card>
+            </TabsContent>
+            
+            <TabsContent value="profile" className="pt-4">
+              <ProfileEditor />
             </TabsContent>
           </Tabs>
         </main>
