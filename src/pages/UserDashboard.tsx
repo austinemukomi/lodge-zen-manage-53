@@ -13,8 +13,6 @@ import { PaymentSummary } from "@/components/booking/PaymentSummary";
 import { useToast } from "@/components/ui/use-toast";
 import { ProfileEditor } from "@/components/profile/ProfileEditor";
 import { useProfile } from "@/hooks/useProfile";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Drawer, DrawerContent, DrawerTrigger, DrawerClose } from "@/components/ui/drawer";
 
 interface UserDashboardProps {
   onLogout: () => void;
@@ -24,9 +22,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const { toast } = useToast();
   const { profile, loading } = useProfile();
-  const isMobile = useIsMobile();
-  const [openDrawer, setOpenDrawer] = useState(false);
-  const [drawerContent, setDrawerContent] = useState<string | null>(null);
   
   // Show welcome toast once on component mount
   useEffect(() => {
@@ -36,26 +31,21 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
     });
   }, []);
 
-  const openDrawerWithContent = (content: string) => {
-    setDrawerContent(content);
-    setOpenDrawer(true);
-  };
-
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-[#F9FAFB]">
+    <div className="flex h-screen bg-[#F9FAFB]">
       <Sidebar />
       
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header onLogout={onLogout} />
         
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          <div className="mb-4 md:mb-6">
-            <h2 className="text-xl md:text-2xl font-semibold text-gray-800">Guest Dashboard</h2>
-            <p className="text-sm md:text-base text-gray-600">Browse, book, and manage your room reservations</p>
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold text-gray-800">Guest Dashboard</h2>
+            <p className="text-gray-600">Browse, book, and manage your room reservations</p>
           </div>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-            <TabsList className="overflow-x-auto flex flex-nowrap w-full md:w-auto">
+            <TabsList>
               <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
               <TabsTrigger value="browse">Browse Rooms</TabsTrigger>
               <TabsTrigger value="bookings">My Bookings</TabsTrigger>
@@ -64,12 +54,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
             </TabsList>
             
             <TabsContent value="dashboard" className="pt-4">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                <div className="lg:col-span-2 space-y-4 md:space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
                   {/* Active Bookings Section */}
-                  <div className="bg-white rounded-lg shadow-sm border p-4 md:p-6">
+                  <div className="bg-white rounded-lg shadow-sm border p-6">
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg md:text-xl font-medium">Your Active Bookings</h3>
+                      <h3 className="text-xl font-medium">Your Active Bookings</h3>
                       <Button variant="outline" size="sm" onClick={() => setActiveTab("bookings")}>
                         View All
                       </Button>
@@ -88,8 +78,8 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
                   </div>
                   
                   {/* Special Offers Section */}
-                  <div className="bg-white rounded-lg shadow-sm border p-4 md:p-6">
-                    <h3 className="text-lg md:text-xl font-medium mb-4">Special Offers</h3>
+                  <div className="bg-white rounded-lg shadow-sm border p-6">
+                    <h3 className="text-xl font-medium mb-4">Special Offers</h3>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="border rounded-lg p-4 bg-gradient-to-br from-blue-50 to-indigo-50">
@@ -106,9 +96,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
                   </div>
                 </div>
                 
-                <div className="lg:col-span-1 space-y-4 md:space-y-6">
+                <div className="lg:col-span-1 space-y-6">
                   {/* User Quick Panel */}
-                  <div className="bg-white rounded-lg shadow-sm border p-4 md:p-6">
+                  <div className="bg-white rounded-lg shadow-sm border p-6">
                     <div className="flex flex-col items-center">
                       <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xl">
                         {!loading && profile ? 
@@ -122,11 +112,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
                       </h3>
                       <p className="text-sm text-gray-600">Guest Member</p>
                       <div className="mt-4 w-full">
-                        <Button 
-                          variant="outline" 
-                          className="w-full" 
-                          onClick={() => isMobile ? openDrawerWithContent("profile") : setActiveTab("profile")}
-                        >
+                        <Button variant="outline" className="w-full" onClick={() => setActiveTab("profile")}>
                           Edit Profile
                         </Button>
                       </div>
@@ -158,7 +144,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
                   </div>
                   
                   {/* Quick Actions */}
-                  <div className="bg-white rounded-lg shadow-sm border p-4 md:p-6">
+                  <div className="bg-white rounded-lg shadow-sm border p-6">
                     <h3 className="text-lg font-medium mb-3">Quick Actions</h3>
                     <div className="space-y-2">
                       <Button variant="outline" className="w-full justify-start">
@@ -177,7 +163,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
                   </div>
                   
                   {/* Help Section */}
-                  <div className="bg-white rounded-lg shadow-sm border p-4 md:p-6">
+                  <div className="bg-white rounded-lg shadow-sm border p-6">
                     <h3 className="text-lg font-medium mb-3 flex items-center">
                       <HelpCircle className="h-5 w-5 mr-2 text-accent" />
                       Need Help?
@@ -201,12 +187,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
             <TabsContent value="browse" className="pt-4">
               <Card>
                 <CardHeader className="pb-3">
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                  <div className="flex justify-between items-center">
                     <div>
                       <CardTitle>Available Rooms</CardTitle>
                       <CardDescription>Browse all available rooms for booking</CardDescription>
                     </div>
-                    <div className="relative w-full md:w-64">
+                    <div className="relative w-64">
                       <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
                       <input
                         type="search"
@@ -252,28 +238,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
           </Tabs>
         </main>
       </div>
-
-      {/* Mobile Drawer for forms */}
-      {isMobile && (
-        <Drawer open={openDrawer} onOpenChange={setOpenDrawer}>
-          <DrawerContent className="h-[85vh] max-h-[85vh] overflow-y-auto">
-            <div className="p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">
-                  {drawerContent === "profile" ? "Edit Profile" : 
-                   drawerContent === "booking" ? "Book a Room" : "Form"}
-                </h3>
-                <DrawerClose asChild>
-                  <Button variant="ghost" size="sm">Close</Button>
-                </DrawerClose>
-              </div>
-              
-              {drawerContent === "profile" && <ProfileEditor />}
-              {drawerContent === "booking" && <BookingForm />}
-            </div>
-          </DrawerContent>
-        </Drawer>
-      )}
     </div>
   );
 };
