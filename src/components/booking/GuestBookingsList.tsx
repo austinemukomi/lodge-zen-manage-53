@@ -2,10 +2,28 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { PaymentSummary } from "./PaymentSummary";
 import { QRCodeDisplay } from "./QRCodeDisplay";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 interface Booking {
   id: string;
@@ -27,7 +45,9 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState<string | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState<string | null>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -86,7 +106,7 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
     };
     
     fetchBookings();
-  }, [limit]);
+  }, [limit, toast]);
 
   // Helper function to map API status values to component's expected format
   const mapBookingStatus = (apiStatus: string): 'confirmed' | 'checked-in' | 'completed' | 'cancelled' => {
@@ -131,6 +151,7 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
         description: "Your booking has been successfully cancelled."
       });
       setBookings(bookings.filter(booking => booking.id !== bookingId));
+      setShowCancelDialog(null);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to cancel booking';
       toast({
@@ -163,6 +184,91 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
     return `${hours}h ${minutes}m remaining`;
   };
 
+  const CancelConfirmation = ({ bookingId }: { bookingId: string }) => {
+    const booking = bookings.find(b => b.id === bookingId);
+    
+    if (!booking) return null;
+    
+    const content = (
+      <>
+        <div className="mt-2 mb-4">
+          <p className="text-sm text-gray-500">
+            Are you sure you want to cancel your booking for room {booking.roomNumber}? This action cannot be undone.
+          </p>
+        </div>
+        <div className="flex justify-end gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCancelDialog(null)}
+          >
+            Keep Booking
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={() => handleCancel(bookingId)}
+          >
+            Yes, Cancel Booking
+          </Button>
+        </div>
+      </>
+    );
+    
+    if (isMobile) {
+      return (
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Cancel Booking</DrawerTitle>
+            <DrawerDescription>This action cannot be undone</DrawerDescription>
+          </DrawerHeader>
+          <div className="p-4">
+            <p className="text-sm text-gray-500">
+              Are you sure you want to cancel your booking for room {booking.roomNumber}?
+            </p>
+          </div>
+          <DrawerFooter>
+            <Button 
+              variant="destructive" 
+              onClick={() => handleCancel(bookingId)}
+            >
+              Yes, Cancel Booking
+            </Button>
+            <DrawerClose asChild>
+              <Button variant="outline">Keep Booking</Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      );
+    }
+    
+    return (
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Cancel Booking</DialogTitle>
+          <DialogDescription>
+            This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <p className="text-sm text-gray-500">
+          Are you sure you want to cancel your booking for room {booking.roomNumber}?
+        </p>
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCancelDialog(null)}
+          >
+            Keep Booking
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={() => handleCancel(bookingId)}
+          >
+            Yes, Cancel Booking
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    );
+  };
+
   if (loading) {
     return <div className="py-8 text-center text-gray-500">Loading your bookings...</div>;
   }
@@ -180,18 +286,18 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
     <div className="space-y-4">
       {bookings.map(booking => (
         <div key={booking.id} className="border rounded-lg overflow-hidden">
-          <div className="p-4 border-b bg-blue-50 flex justify-between items-center">
+          <div className="p-3 md:p-4 border-b bg-blue-50 flex flex-col md:flex-row md:justify-between md:items-center gap-2">
             <div>
               <h4 className="font-medium">{booking.roomType} Room - #{booking.roomNumber}</h4>
-              <div className="flex items-center text-sm text-gray-600 mt-1">
-                <Calendar className="h-3 w-3 mr-1" />
-                <span>
+              <div className="flex items-center text-xs md:text-sm text-gray-600 mt-1 flex-wrap">
+                <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
+                <span className="truncate">
                   Check-in: {formatDate(booking.checkInDate)} — Check-out: {formatDate(booking.checkOutDate)}
                 </span>
               </div>
               {booking.status === 'checked-in' && (
-                <div className="flex items-center text-sm text-gray-600 mt-1">
-                  <Clock className="h-3 w-3 mr-1" />
+                <div className="flex items-center text-xs md:text-sm text-gray-600 mt-1">
+                  <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
                   <span>{getRemainingTime(booking.checkOutDate)}</span>
                 </div>
               )}
@@ -201,15 +307,15 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
               booking.status === 'checked-in' ? 'bg-green-100 text-green-800' :
               booking.status === 'completed' ? 'bg-gray-100 text-gray-800' :
               'bg-red-100 text-red-800'
-            } px-3 py-1 rounded-full text-xs font-medium`}>
+            } px-3 py-1 rounded-full text-xs font-medium self-start md:self-center`}>
               {booking.status === 'confirmed' ? 'Confirmed' :
                booking.status === 'checked-in' ? 'Checked In' :
                booking.status === 'completed' ? 'Completed' : 'Cancelled'}
             </div>
           </div>
           
-          <div className="p-4 bg-white">
-            <div className="flex justify-between mb-3 text-sm">
+          <div className="p-3 md:p-4 bg-white">
+            <div className="flex justify-between mb-3 text-xs md:text-sm">
               <span>Booking Type: <span className="font-medium">{booking.bookingType.charAt(0).toUpperCase() + booking.bookingType.slice(1)}</span></span>
               <span>Total: <span className="font-medium">${booking.amount}</span></span>
             </div>
@@ -222,8 +328,12 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
                       Pay Now
                     </Button>
                   )}
-                  <Button size="sm" variant="outline" className="text-destructive border-destructive" 
-                    onClick={() => handleCancel(booking.id)}>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="text-destructive border-destructive" 
+                    onClick={() => setShowCancelDialog(booking.id)}
+                  >
                     Cancel
                   </Button>
                 </>
@@ -263,6 +373,16 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
           )}
         </div>
       ))}
+      
+      {isMobile ? (
+        <Drawer open={!!showCancelDialog} onOpenChange={(open) => !open && setShowCancelDialog(null)}>
+          {showCancelDialog && <CancelConfirmation bookingId={showCancelDialog} />}
+        </Drawer>
+      ) : (
+        <Dialog open={!!showCancelDialog} onOpenChange={(open) => !open && setShowCancelDialog(null)}>
+          {showCancelDialog && <CancelConfirmation bookingId={showCancelDialog} />}
+        </Dialog>
+      )}
     </div>
   );
 };
