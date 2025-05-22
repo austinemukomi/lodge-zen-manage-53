@@ -11,7 +11,7 @@ const CollapsibleTrigger = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CollapsiblePrimitive.CollapsibleTrigger
     ref={ref}
-    className={cn("flex items-center justify-between w-full", className)}
+    className={cn("flex items-center justify-between w-full focus:outline-none", className)}
     {...props}
   />
 ))
@@ -24,7 +24,7 @@ const CollapsibleContent = React.forwardRef<
   <CollapsiblePrimitive.CollapsibleContent
     ref={ref}
     className={cn(
-      "overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down",
+      "overflow-hidden transition-all duration-300 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down",
       className
     )}
     {...props}
