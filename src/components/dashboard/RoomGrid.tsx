@@ -122,7 +122,13 @@ const RoomCard: React.FC<RoomCardProps> = ({
   // Helper function to get room type display
   const getRoomTypeDisplay = () => {
     if (room.category?.name) return room.category.name;
-    const roomTypeKey = (room.category?.type?.toLowerCase() || "standard") as keyof typeof roomTypeLabel;
+    
+    // Fix: Handle category type safely
+    const categoryType = room.category && typeof room.category === 'object' && 'type' in room.category 
+      ? room.category.type?.toLowerCase() 
+      : 'standard';
+      
+    const roomTypeKey = (categoryType || "standard") as keyof typeof roomTypeLabel;
     return roomTypeLabel[roomTypeKey] || "Standard";
   };
 
@@ -165,7 +171,7 @@ const RoomCard: React.FC<RoomCardProps> = ({
           
           <div className="flex items-center text-gray-600 text-sm">
             <Users className="w-4 h-4 mr-2" /> 
-            <span>Capacity: {room.maxOccupancy || room.capacity || 2}</span>
+            <span>Capacity: {room.maxOccupancy !== undefined ? room.maxOccupancy : (room.capacity !== undefined ? room.capacity : 2)}</span>
           </div>
           
           <div className="flex items-center text-gray-600 text-sm">
@@ -344,7 +350,7 @@ export function RoomGrid({
             name: room.category?.name?.toLowerCase().includes("deluxe") ? "Deluxe" : 
                   room.category?.name?.toLowerCase().includes("suite") ? "Suite" : "Standard",
             type: room.category?.name?.toLowerCase().includes("deluxe") ? "deluxe" : 
-                 room.category?.name?.toLowerCase().includes("suite") ? "suite" : "standard",
+                  room.category?.name?.toLowerCase().includes("suite") ? "suite" : "standard",
           },
           status,
           pricePerHour: room.baseHourlyRate || 25,
@@ -407,7 +413,7 @@ export function RoomGrid({
   };
 
   const filteredRooms = rooms.filter(room => {
-    if (selectedFloor && room.floor !== selectedFloor) return false;
+    if (selectedFloor !== null && room.floor !== selectedFloor) return false;
     if (filter !== "all") {
       // Case insensitive comparison for status filtering
       const normalizedRoomStatus = room.status.toUpperCase();
