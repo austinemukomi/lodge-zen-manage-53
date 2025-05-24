@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Room, RoomStatus } from "@/utils/types";
@@ -96,7 +95,7 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange, bookingEnable
       await onStatusChange(room.id, selectedStatus);
       toast({
         title: "Status Updated",
-        description: `Room ${room.number} status updated to ${selectedStatus}`,
+        description: `Room ${room.roomNumber || room.number} status updated to ${selectedStatus}`,
       });
       setIsEditingStatus(false);
     } catch (error) {
@@ -124,64 +123,64 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange, bookingEnable
   return (
     <div 
       className={cn(
-        "room-card border rounded-lg shadow-sm flex flex-col justify-between h-full overflow-hidden",
+        "room-card border rounded-lg shadow-sm flex flex-col justify-between h-full overflow-hidden bg-white",
         `border-l-4 border-l-${normalizedStatus === 'available' ? 'green' : normalizedStatus === 'occupied' ? 'red' : normalizedStatus === 'cleaning' ? 'yellow' : 'blue'}-500`
       )}
     >
       {/* Category Image */}
       {categoryImage && (
-        <div className="w-full h-32 sm:h-40 overflow-hidden">
+        <div className="w-full h-48 overflow-hidden rounded-t-lg">
           <img 
             src={categoryImage} 
             alt={room.category?.name || "Room"} 
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
           />
         </div>
       )}
       
-      <div className="p-3 sm:p-4 flex-1 flex flex-col">
+      <div className="p-4 flex-1 flex flex-col">
         <div className="flex justify-between items-start mb-3">
-          <h3 className="font-bold text-base sm:text-lg">Room {room.number}</h3>
+          <h3 className="font-bold text-lg">Room {room.roomNumber || room.number}</h3>
           <div className="flex items-center gap-2">
             <div className={cn(
-              "px-2 py-0.5 rounded-full text-xs flex items-center",
+              "px-2 py-1 rounded-full text-xs flex items-center font-medium",
               statusClasses[normalizedStatus]
             )}>
               {statusIcon[normalizedStatus]}
-              <span className="hidden sm:inline">{statusLabel[normalizedStatus]}</span>
+              <span>{statusLabel[normalizedStatus]}</span>
             </div>
             {!bookingEnabled && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-8 w-8"
                 onClick={() => setIsEditingStatus(true)}
               >
-                <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                <Edit className="h-4 w-4" />
               </Button>
             )}
           </div>
         </div>
         
-        <div className="space-y-2 mb-4 flex-1">
-          <div className="flex items-center text-gray-600 text-xs sm:text-sm">
-            <Bed className="w-3 h-3 sm:w-4 sm:h-4 mr-2" /> 
-            <span>{room.category?.name || (room.type ? roomTypeLabel[room.type] : "Standard")}</span>
+        <div className="space-y-3 mb-4 flex-1">
+          <div className="flex items-center text-gray-600 text-sm">
+            <Bed className="w-4 h-4 mr-3 text-blue-500" /> 
+            <span className="font-medium">{room.category?.name || "Standard Room"}</span>
           </div>
           
-          <div className="flex items-center text-gray-600 text-xs sm:text-sm">
-            <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-2" /> 
-            <span>Capacity: {room.capacity || 2}</span>
+          <div className="flex items-center text-gray-600 text-sm">
+            <Users className="w-4 h-4 mr-3 text-green-500" /> 
+            <span>Capacity: {room.maxOccupancy || room.capacity || 2} guests</span>
           </div>
           
-          <div className="flex items-center text-gray-600 text-xs sm:text-sm">
-            <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-2" /> 
-            <span className="truncate">${room.pricePerHour || 25}/hr • ${room.pricePerDay || 100}/day</span>
+          <div className="flex items-center text-gray-600 text-sm">
+            <Clock className="w-4 h-4 mr-3 text-orange-500" /> 
+            <span className="font-medium">${room.baseHourlyRate || room.pricePerHour || 25}/hr • ${room.baseDailyRate || room.pricePerDay || 100}/day</span>
           </div>
           
           {room.specialFeatures && (
-            <div className="text-gray-600 text-xs mt-2">
-              <p className="italic line-clamp-2">{room.specialFeatures}</p>
+            <div className="text-gray-600 text-sm bg-gray-50 p-2 rounded">
+              <p className="italic">{room.specialFeatures}</p>
             </div>
           )}
         </div>
@@ -291,6 +290,7 @@ export function RoomGrid({
         
         return {
           id: room.id.toString(),
+          roomNumber: room.roomNumber,
           number: room.roomNumber,
           type: room.category?.name?.toLowerCase()?.includes("deluxe") ? "deluxe" : 
                 room.category?.name?.toLowerCase()?.includes("suite") ? "suite" : "standard",

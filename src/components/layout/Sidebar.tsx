@@ -10,7 +10,6 @@ import {
   BarChart3,
   Home,
   Boxes,
-  FileText,
   PlusCircle,
   Menu,
   X
@@ -118,7 +117,7 @@ export function Sidebar({ className }: SidebarProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="fixed top-4 left-4 z-50 md:hidden"
+          className="fixed top-4 left-4 z-50 md:hidden bg-white/80 backdrop-blur-sm shadow-lg"
           onClick={() => setMobileOpen(!mobileOpen)}
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -135,7 +134,7 @@ export function Sidebar({ className }: SidebarProps) {
         {/* Mobile Sidebar */}
         <aside
           className={cn(
-            "fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out z-50 md:hidden",
+            "fixed left-0 top-0 h-full w-64 bg-white/95 backdrop-blur-sm border-r border-gray-200 transform transition-transform duration-300 ease-in-out z-50 md:hidden shadow-xl",
             mobileOpen ? "translate-x-0" : "-translate-x-full"
           )}
         >
@@ -156,7 +155,7 @@ export function Sidebar({ className }: SidebarProps) {
                   className={cn(
                     "flex items-center px-4 py-3 rounded-lg transition-colors",
                     isActive(item.path)
-                      ? "bg-primary text-white"
+                      ? "bg-primary text-white shadow-lg"
                       : "text-gray-700 hover:bg-gray-100"
                   )}
                 >
@@ -175,7 +174,7 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "bg-white border-r border-gray-200 transition-all duration-300 flex flex-col h-screen z-10 hidden md:flex",
+        "bg-white/95 backdrop-blur-sm border-r border-gray-200 transition-all duration-300 flex flex-col h-screen z-10 hidden md:flex shadow-lg",
         collapsed ? "w-20" : "w-64",
         className
       )}
@@ -190,7 +189,7 @@ export function Sidebar({ className }: SidebarProps) {
         {collapsed && <Bed className="h-8 w-8 text-primary mx-auto" />}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="p-1 rounded-full hover:bg-gray-100"
+          className="p-1 rounded-full hover:bg-gray-100 transition-colors"
         >
           {collapsed ? (
             <ChevronRight className="h-5 w-5 text-gray-500" />
@@ -209,7 +208,7 @@ export function Sidebar({ className }: SidebarProps) {
               className={cn(
                 "flex items-center px-4 py-3 rounded-lg transition-colors",
                 isActive(item.path)
-                  ? "bg-primary text-white"
+                  ? "bg-primary text-white shadow-lg"
                   : "text-gray-700 hover:bg-gray-100",
                 collapsed ? "justify-center" : "justify-start"
               )}
