@@ -167,20 +167,8 @@ export function ProfileEditor() {
                 <p className="text-sm font-medium text-gray-500">Username</p>
                 <p>{profile.username}</p>
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">User ID</p>
-                <p>{profile.id}</p>
-              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium text-gray-500">First Name</p>
-                <p>{profile.firstName || 'Not specified'}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">Last Name</p>
-                <p>{profile.lastName || 'Not specified'}</p>
-              </div>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Email</p>
@@ -188,11 +176,7 @@ export function ProfileEditor() {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Phone</p>
-              <p>{profile.phone || 'Not specified'}</p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-500">Account Created</p>
-              <p>{new Date(profile.createdAt).toLocaleDateString()}</p>
+              <p>{profile.phoneNumber || 'Not specified'}</p>
             </div>
             <div className="flex justify-end">
               <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>

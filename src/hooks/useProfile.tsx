@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
 export interface UserProfile {
+  phoneNumber: string;
   id: string;
   username: string;
   email: string;
