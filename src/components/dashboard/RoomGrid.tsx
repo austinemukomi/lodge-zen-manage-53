@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Room, RoomStatus } from "@/utils/types";
@@ -36,7 +37,28 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange, bookingEnable
   const [isEditingStatus, setIsEditingStatus] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<RoomStatus>(room.status);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [categoryImage, setCategoryImage] = useState<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchCategoryImage = async () => {
+      if (room.category?.id) {
+        try {
+          const response = await fetch(`http://localhost:8080/api/room-categories/${room.category.id}/images`);
+          if (response.ok) {
+            const images = await response.json();
+            if (images.length > 0) {
+              setCategoryImage(images[0].imageUrl);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching category image:", error);
+        }
+      }
+    };
+
+    fetchCategoryImage();
+  }, [room.category?.id]);
 
   // Convert status to lowercase for consistency in UI
   const normalizedStatus = room.status.toLowerCase() as "available" | "occupied" | "cleaning" | "reserved";
@@ -102,20 +124,31 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange, bookingEnable
   return (
     <div 
       className={cn(
-        "room-card border rounded-lg p-4 shadow-sm flex flex-col justify-between h-full",
+        "room-card border rounded-lg shadow-sm flex flex-col justify-between h-full overflow-hidden",
         `border-l-4 border-l-${normalizedStatus === 'available' ? 'green' : normalizedStatus === 'occupied' ? 'red' : normalizedStatus === 'cleaning' ? 'yellow' : 'blue'}-500`
       )}
     >
-      <div>
+      {/* Category Image */}
+      {categoryImage && (
+        <div className="w-full h-32 sm:h-40 overflow-hidden">
+          <img 
+            src={categoryImage} 
+            alt={room.category?.name || "Room"} 
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+      
+      <div className="p-3 sm:p-4 flex-1 flex flex-col">
         <div className="flex justify-between items-start mb-3">
-          <h3 className="font-bold text-lg">Room {room.number}</h3>
+          <h3 className="font-bold text-base sm:text-lg">Room {room.number}</h3>
           <div className="flex items-center gap-2">
             <div className={cn(
               "px-2 py-0.5 rounded-full text-xs flex items-center",
               statusClasses[normalizedStatus]
             )}>
               {statusIcon[normalizedStatus]}
-              <span>{statusLabel[normalizedStatus]}</span>
+              <span className="hidden sm:inline">{statusLabel[normalizedStatus]}</span>
             </div>
             {!bookingEnabled && (
               <Button
@@ -124,59 +157,59 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange, bookingEnable
                 className="h-6 w-6"
                 onClick={() => setIsEditingStatus(true)}
               >
-                <Edit className="h-4 w-4" />
+                <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             )}
           </div>
         </div>
         
-        <div className="space-y-2 mb-4">
-          <div className="flex items-center text-gray-600 text-sm">
-            <Bed className="w-4 h-4 mr-2" /> 
+        <div className="space-y-2 mb-4 flex-1">
+          <div className="flex items-center text-gray-600 text-xs sm:text-sm">
+            <Bed className="w-3 h-3 sm:w-4 sm:h-4 mr-2" /> 
             <span>{room.category?.name || (room.type ? roomTypeLabel[room.type] : "Standard")}</span>
           </div>
           
-          <div className="flex items-center text-gray-600 text-sm">
-            <Users className="w-4 h-4 mr-2" /> 
-            <span>Capacity: {room.maxOccupancy || room.capacity || 2}</span>
+          <div className="flex items-center text-gray-600 text-xs sm:text-sm">
+            <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-2" /> 
+            <span>Capacity: {room.capacity || 2}</span>
           </div>
           
-          <div className="flex items-center text-gray-600 text-sm">
-            <Clock className="w-4 h-4 mr-2" /> 
-            <span>${room.baseHourlyRate || room.pricePerHour || 25}/hour • ${room.baseDailyRate || room.pricePerDay || 100}/day</span>
+          <div className="flex items-center text-gray-600 text-xs sm:text-sm">
+            <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-2" /> 
+            <span className="truncate">${room.pricePerHour || 25}/hr • ${room.pricePerDay || 100}/day</span>
           </div>
           
           {room.specialFeatures && (
-            <div className="text-gray-600 text-sm mt-2">
-              <p className="italic">{room.specialFeatures}</p>
+            <div className="text-gray-600 text-xs mt-2">
+              <p className="italic line-clamp-2">{room.specialFeatures}</p>
             </div>
           )}
         </div>
+        
+        {bookingEnabled ? (
+          <Button 
+            variant={isAvailable() ? "default" : "outline"}
+            size="sm"
+            className="w-full mt-2"
+            disabled={!isAvailable()}
+            onClick={handleBookRoom}
+          >
+            {isAvailable() ? "Book Now" : "Not Available"}
+          </Button>
+        ) : (
+          <Button 
+            variant={isAvailable() ? "default" : "outline"}
+            size="sm"
+            className="w-full mt-2"
+            disabled={!isAvailable()}
+          >
+            {isAvailable() ? "Assign Room" : statusLabel[normalizedStatus]}
+          </Button>
+        )}
       </div>
-      
-      {bookingEnabled ? (
-        <Button 
-          variant={isAvailable() ? "default" : "outline"}
-          size="sm"
-          className="w-full mt-2"
-          disabled={!isAvailable()}
-          onClick={handleBookRoom}
-        >
-          {isAvailable() ? "Book Now" : "Not Available"}
-        </Button>
-      ) : (
-        <Button 
-          variant={isAvailable() ? "default" : "outline"}
-          size="sm"
-          className="w-full mt-2"
-          disabled={!isAvailable()}
-        >
-          {isAvailable() ? "Assign Room" : statusLabel[normalizedStatus]}
-        </Button>
-      )}
 
       <Dialog open={isEditingStatus} onOpenChange={setIsEditingStatus}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Update Room Status</DialogTitle>
           </DialogHeader>
@@ -196,11 +229,12 @@ const RoomCard: React.FC<RoomCardProps> = ({ room, onStatusChange, bookingEnable
               </SelectContent>
             </Select>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditingStatus(false)}>Cancel</Button>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsEditingStatus(false)} className="w-full sm:w-auto">Cancel</Button>
             <Button 
               onClick={handleStatusChange} 
               disabled={isSubmitting || selectedStatus === room.status}
+              className="w-full sm:w-auto"
             >
               {isSubmitting ? "Updating..." : "Update Status"}
             </Button>
@@ -253,14 +287,13 @@ export function RoomGrid({
       
       // Convert API response to match our Room type
       const formattedRooms = data.map((room: any) => {
-        // Keep the original status format from API
         const status = room.status as RoomStatus;
         
         return {
           id: room.id.toString(),
           number: room.roomNumber,
-          type: room.category?.name?.toLowerCase().includes("deluxe") ? "deluxe" : 
-                room.category?.name?.toLowerCase().includes("suite") ? "suite" : "standard",
+          type: room.category?.name?.toLowerCase()?.includes("deluxe") ? "deluxe" : 
+                room.category?.name?.toLowerCase()?.includes("suite") ? "suite" : "standard",
           status,
           pricePerHour: room.baseHourlyRate || 25,
           pricePerDay: room.baseDailyRate || 100,
@@ -290,7 +323,6 @@ export function RoomGrid({
 
   const handleStatusUpdate = async (roomId: string, newStatus: RoomStatus) => {
     try {
-      // For RESERVED status, use a boolean value in the request body
       const isReserved = newStatus === "RESERVED" || newStatus === "reserved";
       
       const response = await fetch(`http://localhost:8080/api/rooms/${roomId}/status`, {
@@ -300,7 +332,7 @@ export function RoomGrid({
         },
         body: JSON.stringify({ 
           status: newStatus.toUpperCase(),
-          reserved: isReserved // Add the boolean value for RESERVED status
+          reserved: isReserved
         }),
       });
 
@@ -308,7 +340,6 @@ export function RoomGrid({
         throw new Error("Failed to update room status");
       }
 
-      // Update local state
       setRooms(prevRooms => 
         prevRooms.map(room => 
           room.id === roomId ? { ...room, status: newStatus } : room
@@ -325,7 +356,6 @@ export function RoomGrid({
   const filteredRooms = rooms.filter(room => {
     if (selectedFloor && room.floor !== selectedFloor) return false;
     if (filter !== "all") {
-      // Case insensitive comparison for status filtering
       const normalizedRoomStatus = room.status.toUpperCase();
       const normalizedFilter = filter.toUpperCase();
       if (normalizedRoomStatus !== normalizedFilter) return false;
@@ -333,7 +363,6 @@ export function RoomGrid({
     return true;
   });
   
-  // Get unique floors
   const floors = [...new Set(rooms.map(room => room.floor))];
 
   const handleBookRoom = (roomId: string) => {
@@ -352,13 +381,14 @@ export function RoomGrid({
   }
 
   return (
-    <div className={cn("space-y-6", className)}>
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+    <div className={cn("space-y-4 sm:space-y-6", className)}>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 sm:mb-6">
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={selectedFloor === null ? "default" : "outline"}
             size="sm"
             onClick={() => setSelectedFloor(null)}
+            className="text-xs sm:text-sm"
           >
             All Floors
           </Button>
@@ -369,6 +399,7 @@ export function RoomGrid({
               variant={selectedFloor === floor ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedFloor(floor)}
+              className="text-xs sm:text-sm"
             >
               Floor {floor}
             </Button>
@@ -380,6 +411,7 @@ export function RoomGrid({
             variant={filter === "all" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("all")}
+            className="text-xs sm:text-sm"
           >
             All
           </Button>
@@ -387,7 +419,7 @@ export function RoomGrid({
             variant={filter === "AVAILABLE" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("AVAILABLE")}
-            className="text-green-700 border-green-200 hover:bg-green-50"
+            className="text-green-700 border-green-200 hover:bg-green-50 text-xs sm:text-sm"
           >
             Available
           </Button>
@@ -395,7 +427,7 @@ export function RoomGrid({
             variant={filter === "OCCUPIED" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("OCCUPIED")}
-            className="text-red-700 border-red-200 hover:bg-red-50"
+            className="text-red-700 border-red-200 hover:bg-red-50 text-xs sm:text-sm"
           >
             Occupied
           </Button>
@@ -403,7 +435,7 @@ export function RoomGrid({
             variant={filter === "CLEANING" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("CLEANING")}
-            className="text-yellow-700 border-yellow-200 hover:bg-yellow-50"
+            className="text-yellow-700 border-yellow-200 hover:bg-yellow-50 text-xs sm:text-sm"
           >
             Cleaning
           </Button>
@@ -411,14 +443,14 @@ export function RoomGrid({
             variant={filter === "RESERVED" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("RESERVED")}
-            className="text-blue-700 border-blue-200 hover:bg-blue-50"
+            className="text-blue-700 border-blue-200 hover:bg-blue-50 text-xs sm:text-sm"
           >
             Reserved
           </Button>
         </div>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {filteredRooms.length > 0 ? (
           filteredRooms.map((room) => (
             <RoomCard 

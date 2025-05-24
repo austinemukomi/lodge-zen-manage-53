@@ -23,6 +23,8 @@ import { BookingsTable } from "@/components/admin/BookingsTable";
 import { EmployeeManagement } from "@/components/admin/EmployeeManagement";
 import { ReportsPanel } from "@/components/admin/ReportsPanel";
 import { useToast } from "@/components/ui/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -84,6 +86,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   });
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   useEffect(() => {
     const fetchData = async () => {
@@ -209,107 +212,125 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header onLogout={handleLogout} />
         
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
           <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6">
-              <TabsTrigger value="overview" className="flex items-center">
-                <Home className="w-4 h-4 mr-2" />
+            <TabsList className={cn(
+              "grid gap-1 mb-4 sm:mb-6",
+              isMobile ? "grid-cols-2 w-full" : "grid-cols-5 w-auto"
+            )}>
+              <TabsTrigger value="overview" className={cn(
+                "flex items-center",
+                isMobile ? "text-xs px-2" : "text-sm px-4"
+              )}>
+                <Home className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <span>Overview</span>
               </TabsTrigger>
-              <TabsTrigger value="rooms" className="flex items-center">
-                <Boxes className="w-4 h-4 mr-2" />
+              <TabsTrigger value="rooms" className={cn(
+                "flex items-center",
+                isMobile ? "text-xs px-2" : "text-sm px-4"
+              )}>
+                <Boxes className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <span>Rooms</span>
               </TabsTrigger>
-              <TabsTrigger value="bookings" className="flex items-center">
-                <Calendar className="w-4 h-4 mr-2" />
+              <TabsTrigger value="bookings" className={cn(
+                "flex items-center",
+                isMobile ? "text-xs px-2" : "text-sm px-4"
+              )}>
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <span>Bookings</span>
               </TabsTrigger>
-              <TabsTrigger value="employees" className="flex items-center">
-                <Users className="w-4 h-4 mr-2" />
-                <span>Employees</span>
+              <TabsTrigger value="employees" className={cn(
+                "flex items-center",
+                isMobile ? "text-xs px-2" : "text-sm px-4"
+              )}>
+                <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span>Staff</span>
               </TabsTrigger>
-              <TabsTrigger value="reports" className="flex items-center">
-                <FileText className="w-4 h-4 mr-2" />
+              <TabsTrigger value="reports" className={cn(
+                "flex items-center",
+                isMobile ? "text-xs px-2" : "text-sm px-4"
+              )}>
+                <FileText className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <span>Reports</span>
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="overview" className="space-y-6">
+            <TabsContent value="overview" className="space-y-4 sm:space-y-6">
               <AdminOverviewStats />
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-medium">Quick Actions</CardTitle>
-                    <CardDescription>Perform common tasks quickly</CardDescription>
+                    <CardTitle className="text-base sm:text-lg font-medium">Quick Actions</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Perform common tasks quickly</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab("rooms")}>
-                      <Home className="mr-2 h-4 w-4" /> Manage Rooms
+                    <Button variant="outline" className="w-full justify-start text-xs sm:text-sm" onClick={() => setActiveTab("rooms")}>
+                      <Home className="mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Manage Rooms
                     </Button>
-                    <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab("bookings")}>
-                      <Calendar className="mr-2 h-4 w-4" /> View Bookings
+                    <Button variant="outline" className="w-full justify-start text-xs sm:text-sm" onClick={() => setActiveTab("bookings")}>
+                      <Calendar className="mr-2 h-3 w-3 sm:h-4 sm:w-4" /> View Bookings
                     </Button>
-                    <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab("employees")}>
-                      <Users className="mr-2 h-4 w-4" /> Add Employee
+                    <Button variant="outline" className="w-full justify-start text-xs sm:text-sm" onClick={() => setActiveTab("employees")}>
+                      <Users className="mr-2 h-3 w-3 sm:h-4 sm:w-4" /> Add Employee
                     </Button>
-                    <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab("reports")}>
-                      <BarChart3 className="mr-2 h-4 w-4" /> View Reports
+                    <Button variant="outline" className="w-full justify-start text-xs sm:text-sm" onClick={() => setActiveTab("reports")}>
+                      <BarChart3 className="mr-2 h-3 w-3 sm:h-4 sm:w-4" /> View Reports
                     </Button>
                   </CardContent>
                 </Card>
                 
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-medium">Upcoming Check-outs</CardTitle>
-                    <CardDescription>Check-outs in the next 2 hours</CardDescription>
+                    <CardTitle className="text-base sm:text-lg font-medium">Upcoming Check-outs</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Check-outs in the next 2 hours</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {loading ? (
-                      <div className="text-center py-4 text-gray-500">Loading checkouts...</div>
+                      <div className="text-center py-4 text-gray-500 text-xs sm:text-sm">Loading checkouts...</div>
                     ) : upcomingCheckouts.length > 0 ? (
                       <div className="space-y-3">
                         {upcomingCheckouts.map(checkout => (
                           <div key={checkout.bookingCode} className="flex justify-between items-center bg-amber-50 p-2 rounded-md">
-                            <div>
-                              <p className="text-sm font-medium">Room {checkout.roomNumber} - {checkout.guestName}</p>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs sm:text-sm font-medium truncate">Room {checkout.roomNumber} - {checkout.guestName}</p>
                               <p className="text-xs text-gray-500">Check out in {checkout.remainingTime}</p>
                             </div>
-                            <Clock className="h-4 w-4 text-amber-500" />
+                            <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-amber-500 ml-2" />
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-4 text-gray-500">No upcoming checkouts in the next 2 hours</div>
+                      <div className="text-center py-4 text-gray-500 text-xs sm:text-sm">No upcoming checkouts in the next 2 hours</div>
                     )}
                   </CardContent>
                 </Card>
                 
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-medium">Today's Summary</CardTitle>
-                    <CardDescription>Key metrics for today</CardDescription>
+                    <CardTitle className="text-base sm:text-lg font-medium">Today's Summary</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Key metrics for today</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-sm">Check-ins:</span>
-                      <span className="font-medium">{dailySummary.checkIns}</span>
+                      <span className="text-xs sm:text-sm">Check-ins:</span>
+                      <span className="font-medium text-xs sm:text-sm">{dailySummary.checkIns}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm">Check-outs:</span>
-                      <span className="font-medium">{dailySummary.checkOuts}</span>
+                      <span className="text-xs sm:text-sm">Check-outs:</span>
+                      <span className="font-medium text-xs sm:text-sm">{dailySummary.checkOuts}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm">Revenue:</span>
-                      <span className="font-medium text-green-600">${dailySummary.revenue.toFixed(2)}</span>
+                      <span className="text-xs sm:text-sm">Revenue:</span>
+                      <span className="font-medium text-green-600 text-xs sm:text-sm">${dailySummary.revenue.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm">Occupancy Rate:</span>
-                      <span className="font-medium">{dailySummary.occupancyRate}%</span>
+                      <span className="text-xs sm:text-sm">Occupancy Rate:</span>
+                      <span className="font-medium text-xs sm:text-sm">{dailySummary.occupancyRate}%</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm">Pending Payments:</span>
-                      <span className="font-medium text-amber-600">{dailySummary.pendingPayments}</span>
+                      <span className="text-xs sm:text-sm">Pending Payments:</span>
+                      <span className="font-medium text-amber-600 text-xs sm:text-sm">{dailySummary.pendingPayments}</span>
                     </div>
                   </CardContent>
                 </Card>

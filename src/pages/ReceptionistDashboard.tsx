@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -13,6 +12,8 @@ import { BookingForm } from "@/components/booking/BookingForm";
 import { CheckInOutForm } from "@/components/booking/CheckInOutForm";
 import { AllBookingsTable } from "@/components/booking/AllBookingsTable";
 import { useToast } from "@/components/ui/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface ReceptionistDashboardProps {
   onLogout: () => void;
@@ -74,6 +75,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
   const [upcomingCheckouts, setUpcomingCheckouts] = useState<UpcomingCheckout[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -169,7 +171,6 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
         description: `Guest checked out successfully`,
       });
       
-      // Refresh upcoming checkouts after checkout
       const updatedCheckouts = upcomingCheckouts.filter(checkout => checkout.bookingCode !== bookingCode);
       setUpcomingCheckouts(updatedCheckouts);
       
@@ -190,64 +191,67 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header onLogout={onLogout} />
         
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6">
+          <div className="mb-4 sm:mb-6 flex flex-col gap-2">
             <div>
-              <h2 className="text-2xl font-semibold text-gray-800">Receptionist Dashboard</h2>
-              <p className="text-gray-600">Manage guest check-ins and room availability</p>
+              <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">Receptionist Dashboard</h2>
+              <p className="text-sm sm:text-base text-gray-600">Manage guest check-ins and room availability</p>
             </div>
           </div>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="mb-6">
-              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-              <TabsTrigger value="rooms">Room Status</TabsTrigger>
-              <TabsTrigger value="bookings">Bookings</TabsTrigger>
-              <TabsTrigger value="check-in-out">Check-In/Out</TabsTrigger>
+            <TabsList className={cn(
+              "mb-4 sm:mb-6",
+              isMobile ? "grid grid-cols-2 w-full gap-1" : "flex w-auto"
+            )}>
+              <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
+              <TabsTrigger value="rooms" className="text-xs sm:text-sm">Rooms</TabsTrigger>
+              <TabsTrigger value="bookings" className="text-xs sm:text-sm">Bookings</TabsTrigger>
+              <TabsTrigger value="check-in-out" className="text-xs sm:text-sm">Check-In/Out</TabsTrigger>
             </TabsList>
             
             <TabsContent value="dashboard">
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
                 <div className="lg:col-span-3">
-                  <Card className="mb-6">
+                  <Card className="mb-4 sm:mb-6">
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-xl">Quick Actions</CardTitle>
+                      <CardTitle className="text-lg sm:text-xl">Quick Actions</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <Button 
-                          className="h-24 flex-col gap-2 bg-accent hover:bg-accent/90"
+                          className="h-20 sm:h-24 flex-col gap-2 bg-accent hover:bg-accent/90 text-xs sm:text-sm"
                           onClick={() => {
                             setShowAssignForm(true);
                             setShowBookingForm(false);
                             setShowCheckInForm(false);
                           }}
                         >
-                          <Plus className="h-6 w-6" />
+                          <Plus className="h-4 w-4 sm:h-6 sm:w-6" />
                           <span>Manual Room Assignment</span>
                         </Button>
                         
                         <Button 
-                          className="h-24 flex-col gap-2 bg-accent hover:bg-accent/90"
+                          className="h-20 sm:h-24 flex-col gap-2 bg-accent hover:bg-accent/90 text-xs sm:text-sm"
                           onClick={() => {
                             setShowBookingForm(true);
                             setShowAssignForm(false);
                             setShowCheckInForm(false);
                           }}
                         >
-                          <Calendar className="h-6 w-6" />
+                          <Calendar className="h-4 w-4 sm:h-6 sm:w-6" />
                           <span>New Booking</span>
                         </Button>
                         
                         <Button 
-                          className="h-24 flex-col gap-2 bg-accent hover:bg-accent/90"
+                          className="h-20 sm:h-24 flex-col gap-2 bg-accent hover:bg-accent/90 text-xs sm:text-sm"
                           onClick={() => {
                             setShowCheckInForm(true);
                             setShowAssignForm(false);
                             setShowBookingForm(false);
                           }}
                         >
-                          <UserCheck className="h-6 w-6" />
+                          <UserCheck className="h-4 w-4 sm:h-6 sm:w-6" />
                           <span>Check-In/Out</span>
                         </Button>
                       </div>
@@ -255,10 +259,10 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
                   </Card>
                   
                   {showAssignForm && (
-                    <Card className="mb-6">
+                    <Card className="mb-4 sm:mb-6">
                       <CardHeader>
-                        <CardTitle>Manual Room Assignment</CardTitle>
-                        <CardDescription>Walk-in guests and special assignments</CardDescription>
+                        <CardTitle className="text-lg sm:text-xl">Manual Room Assignment</CardTitle>
+                        <CardDescription className="text-xs sm:text-sm">Walk-in guests and special assignments</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <ManualAssignmentForm onComplete={() => setShowAssignForm(false)} />
@@ -267,10 +271,10 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
                   )}
                   
                   {showBookingForm && (
-                    <Card className="mb-6">
+                    <Card className="mb-4 sm:mb-6">
                       <CardHeader>
-                        <CardTitle>New Booking</CardTitle>
-                        <CardDescription>Create a new booking for a guest</CardDescription>
+                        <CardTitle className="text-lg sm:text-xl">New Booking</CardTitle>
+                        <CardDescription className="text-xs sm:text-sm">Create a new booking for a guest</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <BookingForm isReceptionist={true} onComplete={() => setShowBookingForm(false)} />
@@ -279,10 +283,10 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
                   )}
                   
                   {showCheckInForm && (
-                    <Card className="mb-6">
+                    <Card className="mb-4 sm:mb-6">
                       <CardHeader>
-                        <CardTitle>Guest Check-In/Out</CardTitle>
-                        <CardDescription>Process guest check-ins and check-outs</CardDescription>
+                        <CardTitle className="text-lg sm:text-xl">Guest Check-In/Out</CardTitle>
+                        <CardDescription className="text-xs sm:text-sm">Process guest check-ins and check-outs</CardDescription>
                       </CardHeader>
                       <CardContent>
                         <CheckInOutForm onComplete={() => setShowCheckInForm(false)} />
@@ -293,57 +297,57 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
                   <RoomGrid />
                 </div>
                 
-                <div className="lg:col-span-1 space-y-6">
+                <div className="lg:col-span-1 space-y-4 sm:space-y-6">
                   <StatusLegend />
                   
                   {loading ? (
-                    <div className="bg-white p-5 rounded-lg shadow-sm border flex justify-center items-center h-32">
-                      <p>Loading dashboard data...</p>
+                    <div className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border flex justify-center items-center h-32">
+                      <p className="text-xs sm:text-sm">Loading dashboard data...</p>
                     </div>
                   ) : (
                     <>
-                      <div className="bg-white p-5 rounded-lg shadow-sm border">
-                        <h3 className="font-medium text-lg mb-3">Today's Tasks</h3>
+                      <div className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border">
+                        <h3 className="font-medium text-sm sm:text-lg mb-3">Today's Tasks</h3>
                         <div className="space-y-3">
                           <div className="flex items-center justify-between bg-blue-50 p-2 rounded">
                             <span className="flex items-center">
-                              <UserCheck className="h-4 w-4 mr-2 text-blue-600" />
-                              <span>Check-ins</span>
+                              <UserCheck className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-blue-600" />
+                              <span className="text-xs sm:text-sm">Check-ins</span>
                             </span>
-                            <span className="font-medium text-blue-600">{taskCounts.checkIns}</span>
+                            <span className="font-medium text-blue-600 text-xs sm:text-sm">{taskCounts.checkIns}</span>
                           </div>
                           <div className="flex items-center justify-between bg-green-50 p-2 rounded">
                             <span className="flex items-center">
-                              <UserX className="h-4 w-4 mr-2 text-green-600" />
-                              <span>Check-outs</span>
+                              <UserX className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-green-600" />
+                              <span className="text-xs sm:text-sm">Check-outs</span>
                             </span>
-                            <span className="font-medium text-green-600">{taskCounts.checkOuts}</span>
+                            <span className="font-medium text-green-600 text-xs sm:text-sm">{taskCounts.checkOuts}</span>
                           </div>
                           <div className="flex items-center justify-between bg-purple-50 p-2 rounded">
                             <span className="flex items-center">
-                              <Calendar className="h-4 w-4 mr-2 text-purple-600" />
-                              <span>Reservations</span>
+                              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-purple-600" />
+                              <span className="text-xs sm:text-sm">Reservations</span>
                             </span>
-                            <span className="font-medium text-purple-600">{taskCounts.reservations}</span>
+                            <span className="font-medium text-purple-600 text-xs sm:text-sm">{taskCounts.reservations}</span>
                           </div>
                           <div className="flex items-center justify-between bg-yellow-50 p-2 rounded">
                             <span className="flex items-center">
-                              <CheckSquare className="h-4 w-4 mr-2 text-yellow-600" />
-                              <span>Room Inspections</span>
+                              <CheckSquare className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-yellow-600" />
+                              <span className="text-xs sm:text-sm">Room Inspections</span>
                             </span>
-                            <span className="font-medium text-yellow-600">{taskCounts.roomInspections}</span>
+                            <span className="font-medium text-yellow-600 text-xs sm:text-sm">{taskCounts.roomInspections}</span>
                           </div>
                         </div>
                       </div>
                       
-                      <div className="bg-white p-5 rounded-lg shadow-sm border">
-                        <h3 className="font-medium text-lg mb-3">Upcoming Check-outs</h3>
+                      <div className="bg-white p-4 sm:p-5 rounded-lg shadow-sm border">
+                        <h3 className="font-medium text-sm sm:text-lg mb-3">Upcoming Check-outs</h3>
                         {upcomingCheckouts.length > 0 ? (
                           <div className="space-y-3">
                             {upcomingCheckouts.map(checkout => (
                               <div key={checkout.bookingCode} className="flex justify-between items-center bg-amber-50 p-2 rounded-md">
-                                <div>
-                                  <p className="text-sm font-medium">Room {checkout.roomNumber} - {checkout.guestName}</p>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs sm:text-sm font-medium truncate">Room {checkout.roomNumber} - {checkout.guestName}</p>
                                   <p className="text-xs text-gray-500 flex items-center">
                                     <Clock className="h-3 w-3 mr-1" /> {checkout.remainingTime} remaining
                                   </p>
@@ -351,6 +355,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
                                 <Button 
                                   variant="outline" 
                                   size="sm"
+                                  className="text-xs ml-2"
                                   onClick={() => handleCheckout(checkout.bookingCode)}
                                 >
                                   Check-out
@@ -359,7 +364,7 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
                             ))}
                           </div>
                         ) : (
-                          <p className="text-gray-500 text-center py-4">No upcoming checkouts in the next 2 hours</p>
+                          <p className="text-gray-500 text-center py-4 text-xs sm:text-sm">No upcoming checkouts in the next 2 hours</p>
                         )}
                       </div>
                     </>
@@ -369,18 +374,18 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
             </TabsContent>
             
             <TabsContent value="rooms">
-              <div className="mb-6 flex items-center justify-between">
-                <h3 className="text-xl font-medium">Room Status Overview</h3>
-                <div className="flex items-center gap-2">
-                  <div className="relative w-64">
+              <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <h3 className="text-lg sm:text-xl font-medium">Room Status Overview</h3>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <div className="relative w-full sm:w-64">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                     <input
                       type="search"
                       placeholder="Search rooms..."
-                      className="w-full pl-8 h-9 rounded-md border border-input"
+                      className="w-full pl-8 h-9 rounded-md border border-input text-sm"
                     />
                   </div>
-                  <Button>
+                  <Button className="w-full sm:w-auto">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Room
                   </Button>
@@ -392,12 +397,12 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
             <TabsContent value="bookings">
               <Card>
                 <CardHeader>
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                     <div>
-                      <CardTitle>All Bookings</CardTitle>
-                      <CardDescription>Manage all current and upcoming bookings</CardDescription>
+                      <CardTitle className="text-lg sm:text-xl">All Bookings</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">Manage all current and upcoming bookings</CardDescription>
                     </div>
-                    <Button onClick={() => setActiveTab("dashboard")}>
+                    <Button onClick={() => setActiveTab("dashboard")} className="w-full sm:w-auto">
                       <Plus className="h-4 w-4 mr-2" />
                       New Booking
                     </Button>
@@ -412,8 +417,8 @@ const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ onLogout 
             <TabsContent value="check-in-out">
               <Card>
                 <CardHeader>
-                  <CardTitle>Check-In/Out Management</CardTitle>
-                  <CardDescription>Process guest check-ins and check-outs</CardDescription>
+                  <CardTitle className="text-lg sm:text-xl">Check-In/Out Management</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Process guest check-ins and check-outs</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <CheckInOutForm fullPage={true} />
