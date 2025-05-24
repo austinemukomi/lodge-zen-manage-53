@@ -115,7 +115,7 @@ export const GuestBookingsList: React.FC<GuestBookingsListProps> = ({ limit }) =
       }
       
       const response = await fetch(`http://localhost:8080/api/bookings/${bookingId}/cancel`, {
-        method: 'POST',
+        method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`
         }
