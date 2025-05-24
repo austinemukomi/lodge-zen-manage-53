@@ -49,7 +49,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
               <TabsTrigger value="browse" className="text-xs sm:text-sm">Browse</TabsTrigger>
               <TabsTrigger value="bookings" className="text-xs sm:text-sm">Bookings</TabsTrigger>
               <TabsTrigger value="booking-form" className="text-xs sm:text-sm">Book Room</TabsTrigger>
-              <TabsTrigger value="profile" className="text-xs sm:text-sm">Profile</TabsTrigger>
             </TabsList>
             
             <TabsContent value="dashboard" className="pt-4">
