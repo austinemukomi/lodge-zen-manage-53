@@ -40,11 +40,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
         <Header onLogout={onLogout} />
         
         <main className="flex-1 overflow-y-auto p-3 sm:p-6">
-          <div className="mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">Guest Dashboard</h2>
-            <p className="text-sm sm:text-base text-gray-600">Browse, book, and manage your room reservations</p>
-          </div>
-          
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-4 sm:mb-6">
             <TabsList className={cn(
               "grid w-full",
@@ -98,88 +93,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onLogout }) => {
                   </div>
                 </div>
                 
-                <div className="lg:col-span-1 space-y-4 sm:space-y-6">
-                  <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
-                    <div className="flex flex-col items-center">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-sm sm:text-xl">
-                        {!loading && profile ? 
-                          (profile.firstName?.charAt(0) || '') + (profile.lastName?.charAt(0) || '') || 
-                          profile.username?.substring(0, 2).toUpperCase() || 'JD' : 'JD'}
-                      </div>
-                      <h3 className="text-sm sm:text-lg font-medium mt-3 text-center">
-                        {!loading && profile ? 
-                          `${profile.firstName || ''} ${profile.lastName || ''}` || profile.username : 
-                          "Loading..."}
-                      </h3>
-                      <p className="text-xs sm:text-sm text-gray-600">Guest Member</p>
-                      <div className="mt-4 w-full">
-                        <Button variant="outline" className="w-full text-xs sm:text-sm" onClick={() => setActiveTab("profile")}>
-                          Edit Profile
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-6 space-y-4">
-                      <div className="flex justify-between items-center py-2 border-t">
-                        <div className="flex items-center">
-                          <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-600" />
-                          <span className="text-xs sm:text-sm">Total Stays</span>
-                        </div>
-                        <span className="font-medium text-xs sm:text-sm">3</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-t">
-                        <div className="flex items-center">
-                          <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-600" />
-                          <span className="text-xs sm:text-sm">Payment Methods</span>
-                        </div>
-                        <span className="font-medium text-xs sm:text-sm">2</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2 border-t">
-                        <div className="flex items-center">
-                          <Bell className="h-3 w-3 sm:h-4 sm:w-4 mr-2 text-gray-600" />
-                          <span className="text-xs sm:text-sm">Notifications</span>
-                        </div>
-                        <span className="font-medium text-xs sm:text-sm">On</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
-                    <h3 className="text-sm sm:text-lg font-medium mb-3">Quick Actions</h3>
-                    <div className="space-y-2">
-                      <Button variant="outline" className="w-full justify-start text-xs sm:text-sm">
-                        <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                        Generate QR for Check-in
-                      </Button>
-                      <Button variant="outline" className="w-full justify-start text-xs sm:text-sm">
-                        <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                        Request Early Check-in
-                      </Button>
-                      <Button variant="outline" className="w-full justify-start text-xs sm:text-sm">
-                        <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                        View Payment History
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white rounded-lg shadow-sm border p-4 sm:p-6">
-                    <h3 className="text-sm sm:text-lg font-medium mb-3 flex items-center">
-                      <HelpCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-accent" />
-                      Need Help?
-                    </h3>
-                    <div className="space-y-2">
-                      <Button variant="outline" className="w-full justify-start text-xs sm:text-sm">
-                        Contact Reception
-                      </Button>
-                      <Button variant="outline" className="w-full justify-start text-xs sm:text-sm">
-                        Request Room Service
-                      </Button>
-                      <Button variant="outline" className="w-full justify-start text-xs sm:text-sm">
-                        Report an Issue
-                      </Button>
-                    </div>
-                  </div>
-                </div>
               </div>
             </TabsContent>
             
